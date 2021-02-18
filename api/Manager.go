@@ -1,6 +1,6 @@
 package api
 
-import "bedgg-server/api/game"
+import "gogs/api/game"
 
 type Manager struct {
 	playerMap     map[string]game.Player

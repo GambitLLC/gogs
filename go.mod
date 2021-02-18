@@ -1,4 +1,4 @@
-module bedgg-server
+module gogs
 
 go 1.16
 

@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	"bedgg-server/api/listeners"
-	bedgg "bedgg-server/io"
-	pk "bedgg-server/net/packet"
-	ptypes "bedgg-server/net/ptypes"
+	"gogs/api/listeners"
+	io "gogs/io"
+	pk "gogs/net/packet"
+	//ptypes "gogs/net/ptypes"
 
 	"github.com/panjf2000/gnet"
 )
@@ -197,29 +197,28 @@ func (s *server) Tick() (delay time.Duration, action gnet.Action) {
 }
 
 func main() {
-	/*
-		go func() {
-			echo := new(server)
-			log.Fatal(
-				gnet.Serve(echo, "tcp://0.0.0.0:25565", gnet.WithMulticore(true)),
-			)
-		}()
-	*/
+	go func() {
+		echo := new(server)
+		log.Fatal(
+			gnet.Serve(echo, "tcp://0.0.0.0:25565", gnet.WithMulticore(true)),
+		)
+	}()
 
-	c, err := bedgg.NewEmitter("127.0.0.1", 8080)
+
+	c, err := io.NewEmitter("127.0.0.1", 8080)
 	if err != nil {
 		log.Printf("Fatal error occured: %v", err.Error())
 		return
 	}
 
-	err = bedgg.RegisterNewSubscriber(c, &listeners.LoginListener{})
+	err = io.RegisterNewSubscriber(c, &listeners.LoginListener{})
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
 	time.Sleep(time.Second * 2)
-	c.Publish(bedgg.CHANNEL_KEY, bedgg.CHANNEL_NAME, "hello, world")
+	c.Publish(io.CHANNEL_KEY, io.CHANNEL_NAME, "hello, world")
 
 	select {}
 }

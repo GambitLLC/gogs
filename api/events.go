@@ -1,7 +1,7 @@
 package api
 
 import (
-	"bedgg-server/api/events"
+	"gogs/api/events"
 )
 
 type EventHandler struct {

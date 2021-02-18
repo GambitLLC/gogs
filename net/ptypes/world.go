@@ -1,7 +1,7 @@
 package ptypes
 
 import (
-	pk "bedgg-server/net/packet"
+	pk "gogs/net/packet"
 )
 
 type JoinGame struct {
