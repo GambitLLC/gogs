@@ -1,6 +1,7 @@
 package packet
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/binary"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"math"
 
 	"github.com/google/uuid"
+	"github.com/Tnze/go-mc/nbt"
 )
 
 // Field represents a field in a packet. Can be Encoded & Decoded
@@ -45,6 +47,9 @@ type (
 	Identifier = String
 	VarInt     int32
 	VarLong    int64
+	NBT struct {
+		V interface{}
+	}
 	Position   struct {
 		X, Y, Z int32
 	}
@@ -109,6 +114,7 @@ func (ub *UByte) Decode(r PacketReader) error {
 
 func (s Short) Encode() (bs []byte) {
 	v := uint16(s)
+	bs = make([]byte, 2)
 	binary.BigEndian.PutUint16(bs, v)
 	return
 }
@@ -125,6 +131,7 @@ func (s *Short) Decode(r PacketReader) error {
 
 func (us UShort) Encode() (bs []byte) {
 	v := uint16(us)
+	bs = make([]byte, 2)
 	binary.BigEndian.PutUint16(bs, v)
 	return
 }
@@ -141,6 +148,7 @@ func (us *UShort) Decode(r PacketReader) error {
 
 func (n Int) Encode() (bs []byte) {
 	v := uint32(n)
+	bs = make([]byte, 4)
 	binary.BigEndian.PutUint32(bs, v)
 	return
 }
@@ -157,6 +165,7 @@ func (n *Int) Decode(r PacketReader) error {
 
 func (n Long) Encode() (bs []byte) {
 	v := uint64(n)
+	bs = make([]byte, 8)
 	binary.BigEndian.PutUint64(bs, v)
 	return
 }
@@ -173,6 +182,7 @@ func (n *Long) Decode(r PacketReader) error {
 
 func (f Float) Encode() (bs []byte) {
 	v := math.Float32bits(float32(f))
+	bs = make([]byte, 4)
 	binary.BigEndian.PutUint32(bs, v)
 	return
 }
@@ -189,6 +199,7 @@ func (f *Float) Decode(r PacketReader) error {
 
 func (d Double) Encode() (bs []byte) {
 	v := math.Float64bits(float64(d))
+	bs = make([]byte, 8)
 	binary.BigEndian.PutUint64(bs, v)
 	return
 }
@@ -263,6 +274,24 @@ func (v *VarInt) Decode(r PacketReader) error {
 
 	*v = VarInt(res)
 	return nil
+}
+
+func (n NBT) Encode() []byte {
+	var bs bytes.Buffer
+
+	if n.V != nil {
+		if err := nbt.NewEncoder(&bs).Encode(n.V); err != nil {
+			panic(err)
+		}
+	} else {
+		return []byte{nbt.TagEnd}
+	}
+
+	return bs.Bytes()
+}
+
+func (n *NBT) Decode(r PacketReader) error {
+	return nbt.NewDecoder(r).Decode(n.V)
 }
 
 func (u UUID) Encode() []byte {

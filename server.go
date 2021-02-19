@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"gogs/net/ptypes"
 	"log"
 	"time"
 
@@ -25,12 +26,12 @@ const (
 
 type Context struct {
 	State        CONNECTION_STATE
-	HandlePacket func(gnet.Conn, *pk.Packet) ([]byte, error)
+	HandlePacket func(gnet.Conn, *pk.Packet) error
 }
 
-func handleHandshake(c gnet.Conn, p *pk.Packet) ([]byte, error) {
+func handleHandshake(c gnet.Conn, p *pk.Packet) error {
 	if p.ID != 0 {
-		return nil, errors.New("handshake expects Packet ID 0")
+		return errors.New("handshake expects Packet ID 0")
 	}
 
 	var (
@@ -42,26 +43,36 @@ func handleHandshake(c gnet.Conn, p *pk.Packet) ([]byte, error) {
 
 	err := p.Unmarshal(&protocolVersion, &address, &port, &nextState)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	c.SetContext(Context{CONNECTION_STATE(nextState), handleLoginStart})
+	switch CONNECTION_STATE(nextState) {
+	case STATUS:
+		log.Printf("Setting state to STATUS")
+		c.SetContext(Context{CONNECTION_STATE(nextState), nil})
+	case LOGIN:
+		log.Printf("Setting state to LOGIN")
+		c.SetContext(Context{CONNECTION_STATE(nextState), handleLoginStart})
+	default:
+		log.Printf("Unhandled state %v", nextState)
+		return errors.New("unhandled state")
+	}
 
-	return nil, nil
+	return nil
 }
 
-func handleLoginStart(c gnet.Conn, p *pk.Packet) (out []byte, err error) {
+func handleLoginStart(c gnet.Conn, p *pk.Packet) error {
 	if p.ID != 0 {
-		return nil, errors.New("login start expects Packet ID 0")
+		return errors.New("login start expects Packet ID 0")
 	}
 
 	var (
 		name pk.String
 	)
 
-	err = p.Unmarshal(&name)
+	err := p.Unmarshal(&name)
 	if err != nil {
-		return
+		return err
 	}
 
 	log.Printf("received login from player %v", name)
@@ -69,9 +80,8 @@ func handleLoginStart(c gnet.Conn, p *pk.Packet) (out []byte, err error) {
 	if len(name) > 16 {
 		// TODO: define packetid consts and use them
 		// send disconnect
-		out = pk.Marshal(0x00, pk.Chat("username too long")).Encode()
-		err = errors.New("username too long")
-		return
+		c.SendTo(pk.Marshal(0x00, pk.Chat("username too long")).Encode())
+		return errors.New("username too long")
 	}
 
 	/*
@@ -88,44 +98,67 @@ func handleLoginStart(c gnet.Conn, p *pk.Packet) (out []byte, err error) {
 
 	c.SetContext(Context{PLAY, nil})
 	// send login success (offline mode for now)
-	out = pk.Marshal(
+	c.SendTo(pk.Marshal(
 		0x02,
 		pk.UUID(pk.NameToUUID(string(name))), // UUID
 		pk.String(name),                      // Username
-	).Encode()
+	).Encode())
 
 	// also send out join game
-	/*
-		out = append(out, ptypes.JoinGame{
-			PlayerEntity: 0,
-			Hardcore:     false,
-			Gamemode:     0,
-			PrevGamemode: 0,
-			WorldCount:   1,
-			WorldNames:   "",
-			Dimension:    0,
-			WorldName:    "",
-			HashedSeed:   0,
-			ViewDistance: 0,
-			RDI:          false,
-			ERS:          false,
-			IsDebug:      false,
-			IsFlat:       false,
-		}.CreatePacket().Encode()...)
-	*/
-	out = append(out, pk.Marshal(0x24,
-		pk.Int(0),            // EntityID
-		pk.UByte(1),          // Gamemode
-		pk.Int(0),            // Dimension
-		pk.Long(0),           // HashedSeed
-		pk.UByte(20),         // MaxPlayer
-		pk.String("default"), // LevelType
-		pk.VarInt(15),        // View Distance
-		pk.Boolean(false),    // Reduced Debug Info
-		pk.Boolean(true),     // Enable respawn screen
-	).Encode()...)
+	c.SendTo(ptypes.JoinGame{
+		PlayerEntity: 12193,
+		Hardcore:     false,
+		Gamemode:     0,
+		PrevGamemode: 0,
+		WorldCount:   1,
+		WorldNames:   []pk.Identifier{"world"},
+		DimensionCodec: pk.NBT{
+			V: ptypes.DimensionCodec{
+				DimensionTypes: ptypes.DimensionTypeRegistry{
+					Type: "minecraft:dimension_type",
+					Value: []ptypes.DimensionTypeRegistryEntry{
+						{"minecraft:overworld",
+							0,
+							ptypes.MinecraftOverworld,
+						},
+					},
+				},
+				BiomeRegistry: ptypes.BiomeRegistry{
+					Type:  "minecraft:worldgen/biome",
+					Value: []ptypes.BiomeRegistryEntry{
+						{
+							Name: "minecraft:plains",
+							ID:   1,
+							Element: ptypes.BiomeProperties{
+								Precipitation: "none",
+								Depth:         0.125,
+								Temperature:   0.8,
+								Scale:         0.05,
+								Downfall:      0.4,
+								Category:      "plains",
+								Effects: ptypes.BiomeEffects{
+									SkyColor:      7907327,
+									WaterFogColor: 329011,
+									FogColor:      12638463,
+									WaterColor:    4159204,
+								},
+							},
+						},
+					},
+				},
+			}},
+		Dimension:    pk.NBT{V: ptypes.MinecraftOverworld},
+		WorldName:    "world",
+		HashedSeed:   0,
+		MaxPlayers:   20,
+		ViewDistance: 10,
+		RDI:          false,
+		ERS:          false,
+		IsDebug:      false,
+		IsFlat:       false,
+	}.CreatePacket().Encode())
 
-	return
+	return nil
 }
 
 // bed.gg server
@@ -172,7 +205,7 @@ func (s *server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Actio
 	case HANDSHAKING:
 		fallthrough
 	case LOGIN:
-		out, err = ctx.HandlePacket(c, packet)
+		err = ctx.HandlePacket(c, packet)
 		if err != nil {
 			log.Println(err)
 			action = gnet.Close
@@ -203,7 +236,6 @@ func main() {
 			gnet.Serve(echo, "tcp://0.0.0.0:25565", gnet.WithMulticore(true)),
 		)
 	}()
-
 
 	c, err := io.NewEmitter("127.0.0.1", 8080)
 	if err != nil {
