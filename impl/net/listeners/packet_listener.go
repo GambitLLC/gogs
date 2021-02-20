@@ -6,5 +6,5 @@ import (
 )
 
 type PacketListener interface {
-	HandlePacket(gnet.Conn, *pk.Packet) error
+	HandlePacket(gnet.Conn, *pk.Packet) ([]byte, error)
 }

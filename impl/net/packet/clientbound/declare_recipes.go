@@ -2,9 +2,19 @@ package clientbound
 
 import pk "gogs/impl/net/packet"
 
-type recipeInfo []pk.Identifier
+type DeclareRecipes struct {
+	NumRecipes pk.VarInt
+	Recipes    recipes
+}
 
-func (a recipeInfo) Encode() []byte {
+func (s DeclareRecipes) CreatePacket() pk.Packet {
+	// TODO: create packetid consts
+	return pk.Marshal(0x5A, s.NumRecipes, s.Recipes)
+}
+
+type recipes []recipe
+
+func (a recipes) Encode() []byte {
 	var bs []byte
 	for _, v := range a {
 		bs = append(bs, v.Encode()...)
@@ -12,12 +22,10 @@ func (a recipeInfo) Encode() []byte {
 	return bs
 }
 
-type DeclareRecipes struct {
-	NumRecipes	pk.VarInt
-	Recipe		recipeInfo	// TODO: array of multiple types (identifier/optional)
+// TODO: create recipe struct
+type recipe struct {
 }
 
-func (s DeclareRecipes) CreatePacket() pk.Packet {
-	// TODO: create packetid consts
-	return pk.Marshal(0x5A, s.NumRecipes, s.Recipe)
+func (s recipe) Encode() []byte {
+	return nil
 }

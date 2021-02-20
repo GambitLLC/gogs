@@ -47,10 +47,10 @@ type (
 	Identifier = String
 	VarInt     int32
 	VarLong    int64
-	NBT struct {
+	NBT        struct {
 		V interface{}
 	}
-	Position   struct {
+	Position struct {
 		X, Y, Z int32
 	}
 	Angle     int8
@@ -234,7 +234,7 @@ func (s *String) Decode(r PacketReader) error {
 }
 
 func (v VarInt) Encode() (vs []byte) {
-	n := int32(v)
+	n := uint32(v)
 	for {
 		b := n & 0b01111111
 		n >>= 7
@@ -296,7 +296,7 @@ func (n *NBT) Decode(r PacketReader) error {
 
 func (p Position) Encode() (bs []byte) {
 	var v uint64
-	v = (uint64(p.X & 0x3FFFFFF) << 38) | (uint64(p.Z & 0x3FFFFFF) << 12) | uint64(p.Y & 0xFFF)
+	v = (uint64(p.X&0x3FFFFFF) << 38) | (uint64(p.Z&0x3FFFFFF) << 12) | uint64(p.Y&0xFFF)
 	bs = make([]byte, 8)
 	binary.BigEndian.PutUint64(bs, v)
 	return
@@ -309,9 +309,9 @@ func (p *Position) Decode(r PacketReader) error {
 	}
 
 	v := binary.BigEndian.Uint64(bs)
-	p.X = int32(v >> 38);
-	p.Y = int32(v & 0xFFF);
-	p.Z = int32(v << 26 >> 38);
+	p.X = int32(v >> 38)
+	p.Y = int32(v & 0xFFF)
+	p.Z = int32(v << 26 >> 38)
 	return nil
 }
 

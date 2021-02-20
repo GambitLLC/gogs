@@ -19,9 +19,9 @@ type HandshakePacketListener struct {
 	S api.Server
 }
 
-func (listener HandshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) error {
+func (listener HandshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]byte, error) {
 	if p.ID != 0 {
-		return errors.New("handshake expects Packet ID 0")
+		return nil, errors.New("handshake expects Packet ID 0")
 	}
 
 	var (
@@ -33,7 +33,7 @@ func (listener HandshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) 
 
 	err := p.Unmarshal(&protocolVersion, &address, &port, &nextState)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	switch ConnectionState(nextState) {
@@ -49,8 +49,8 @@ func (listener HandshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) 
 		})
 	default:
 		logger.Printf("Unhandled state %v", nextState)
-		return errors.New("unhandled state")
+		return nil, errors.New("unhandled state")
 	}
 
-	return nil
+	return nil, nil
 }

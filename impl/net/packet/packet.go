@@ -13,9 +13,12 @@ type Packet struct {
 // Marshal creates a Packet from the given id and fields
 func Marshal(id int32, fields ...Encodable) (p Packet) {
 	p.ID = id
+	buf := bytes.Buffer{}
 	for _, field := range fields {
-		p.Data = append(p.Data, field.Encode()...)
+		buf.Write(field.Encode())
+		//p.Data = append(p.Data, field.Encode()...)
 	}
+	p.Data = buf.Bytes()
 	return
 }
 

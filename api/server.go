@@ -8,4 +8,5 @@ import (
 
 type Server interface {
 	CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game.Player
+	PlayerFromConn(conn gnet.Conn) *game.Player
 }

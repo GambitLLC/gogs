@@ -3,7 +3,6 @@ package impl
 import (
 	"bytes"
 	"github.com/google/uuid"
-	"gogs/api/events"
 	"gogs/impl/logger"
 	"gogs/impl/net/packet/clientbound"
 	"strconv"
@@ -40,6 +39,20 @@ func (s *Server) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game
 	player = &game.Player{
 		UUID: uuid,
 		Name: name,
+		Position: game.Position{
+			X: 0,
+			Y: 2,
+			Z: 0,
+		},
+		Rotation: game.Rotation{
+			Yaw:   0,
+			Pitch: 0,
+		},
+		SpawnPosition: game.Position{
+			X: 0,
+			Y: 2,
+			Z: 0,
+		},
 	}
 	s.playerMap.all = append(s.playerMap.all, player)
 	s.playerMap.uuidToPlayer[uuid] = player
@@ -47,6 +60,10 @@ func (s *Server) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game
 	s.playerMap.connToUUID[conn] = uuid
 
 	return player
+}
+
+func (s *Server) PlayerFromConn(conn gnet.Conn) *game.Player {
+	return s.playerMap.uuidToPlayer[s.playerMap.connToUUID[conn]]
 }
 
 func (s *Server) Init() {
@@ -58,46 +75,46 @@ func (s *Server) Init() {
 	// TODO: set up Server initialization (world, etc)
 
 	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
-	events.PlayerLoginEvent.RegisterNet(func(event *events.PlayerLoginData) {
-		// send login success
-		if event.Result == events.LoginAllowed {
-			err := event.Conn.AsyncWrite(pk.Marshal(
-				0x02,
-				pk.UUID(event.Player.UUID),
-				pk.String(event.Player.Name),
-			).Encode())
-			if err != nil {
-				logger.Printf("error sending login success, %w", err)
-			}
-		} else {
-			// TODO: send kick message
-		}
-	})
+	//events.PlayerLoginEvent.RegisterNet(func(event *events.PlayerLoginData) {
+	//	// send login success
+	//	if event.Result == events.LoginAllowed {
+	//		err := event.Conn.AsyncWrite(pk.Marshal(
+	//			0x02,
+	//			pk.UUID(event.Player.UUID),
+	//			pk.String(event.Player.Name),
+	//		).Encode())
+	//		if err != nil {
+	//			logger.Printf("error sending login success, %w", err)
+	//		}
+	//	} else {
+	//		// TODO: send kick message
+	//	}
+	//})
 
-	events.PlayerJoinEvent.RegisterNet(func(data *events.PlayerJoinData) {
-		player := data.Player
-		for _, c := range s.playerMap.uuidToConn {
-			err := c.AsyncWrite(clientbound.PlayerInfo{
-				Action:     0,
-				NumPlayers: 1,
-				Players: []pk.Encodable{
-					clientbound.PlayerInfoAddPlayer{
-						UUID:           pk.UUID(player.UUID),
-						Name:           pk.String(player.Name),
-						NumProperties:  pk.VarInt(0),
-						Properties:     nil,
-						Gamemode:       pk.VarInt(0),
-						Ping:           pk.VarInt(0),
-						HasDisplayName: false,
-						DisplayName:    "",
-					},
-				},
-			}.CreatePacket().Encode())
-			if err != nil {
-				logger.Printf("error sending player info, %w", err)
-			}
-		}
-	})
+	//events.PlayerJoinEvent.RegisterNet(func(data *events.PlayerJoinData) {
+	//	player := data.Player
+	//	for _, c := range s.playerMap.uuidToConn {
+	//		err := c.AsyncWrite(clientbound.PlayerInfo{
+	//			Action:     0,
+	//			NumPlayers: 1,
+	//			Players: []pk.Encodable{
+	//				clientbound.PlayerInfoAddPlayer{
+	//					UUID:           pk.UUID(player.UUID),
+	//					Name:           pk.String(player.Name),
+	//					NumProperties:  pk.VarInt(0),
+	//					Properties:     nil,
+	//					Gamemode:       pk.VarInt(0),
+	//					Ping:           pk.VarInt(0),
+	//					HasDisplayName: false,
+	//					DisplayName:    "",
+	//				},
+	//			},
+	//		}.CreatePacket().Encode())
+	//		if err != nil {
+	//			logger.Printf("error sending player info, %w", err)
+	//		}
+	//	}
+	//})
 
 }
 
@@ -147,20 +164,21 @@ func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
 
 //On packet
 func (s *Server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Action) {
+	action = gnet.None
 	packet, err := pk.Decode(bytes.NewReader(frame))
 	if err != nil {
 		logger.Printf("error: %w", err)
-		return nil, gnet.None
+		return
 	}
 	logger.Printf("packet came in: %v", *packet)
 
 	plist := c.Context().(plists.PacketListener)
-	if err := plist.HandlePacket(c, packet); err != nil {
+	if out, err = plist.HandlePacket(c, packet); err != nil {
 		logger.Printf("failed to handle packet, got error: %w", err)
-		return nil, gnet.None
+		return
 	}
 
-	return nil, gnet.None
+	return
 }
 
 //On tick

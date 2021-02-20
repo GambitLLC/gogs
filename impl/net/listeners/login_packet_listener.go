@@ -1,11 +1,11 @@
 package listeners
 
 import (
+	"bytes"
 	"errors"
 	"github.com/google/uuid"
 	"github.com/panjf2000/gnet"
 	"gogs/api"
-	"gogs/api/events"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
@@ -26,27 +26,27 @@ type LoginPacketListener struct {
 	state           LoginState
 }
 
-func (listener LoginPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) error {
+func (listener LoginPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]byte, error) {
 	switch listener.state {
 	case start:
 		return listener.handleLoginStart(c, p)
 	case encrypt:
-		return errors.New("not yet implemented")
+		return nil, errors.New("not yet implemented")
 	default:
 		log.Panicf("Unhandled state in LoginPacketListener: %v", listener.state)
 	}
-	return nil
+	return nil, nil
 }
 
-func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet) error {
+func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet) ([]byte, error) {
 	if p.ID != 0 {
-		return errors.New("login start expects Packet ID 0")
+		return nil, errors.New("login start expects Packet ID 0")
 	}
 
 	var name pk.String
 
 	if err := p.Unmarshal(&name); err != nil {
-		return err
+		return nil, err
 	}
 
 	logger.Printf("received login from player %v", name)
@@ -54,8 +54,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 	if len(name) > 16 {
 		// TODO: define packetid consts and use them
 		// send disconnect
-		c.AsyncWrite(pk.Marshal(0x00, pk.Chat("username too long")).Encode())
-		return errors.New("username too long")
+		return pk.Marshal(0x00, pk.Chat("username too long")).Encode(), errors.New("username too long")
 	}
 
 	// TODO: send encryption request
@@ -70,7 +69,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 				pk.ByteArray([]byte("s")), // verify token in bytes
 			).Encode()
 		*/
-		return errors.New("encryption (online mode) is not implemented")
+		return nil, errors.New("encryption (online mode) is not implemented")
 	} else {
 		c.SetContext(PlayPacketListener{
 			S:               listener.S,
@@ -78,115 +77,81 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 		})
 
 		player := listener.S.CreatePlayer(string(name), uuid.UUID(pk.NameToUUID(string(name))), c)
+
+		// send login success
+		buf := bytes.Buffer{}
+		buf.Write(pk.Marshal(
+			0x02,
+			pk.UUID(player.UUID),
+			pk.String(player.Name),
+		).Encode())
+
 		// trigger login event
-		events.PlayerLoginEvent.Trigger(&events.PlayerLoginData{
-			Player: player,
-			Conn:   c,
-		})
+		//events.PlayerLoginEvent.Trigger(&events.PlayerLoginData{
+		//	Player: player,
+		//	Conn:   c,
+		//})
+		//
+		//events.PlayerJoinEvent.Trigger(&events.PlayerJoinData{
+		//	Player:  player,
+		//	Message: "",
+		//})
 
-		events.PlayerJoinEvent.Trigger(&events.PlayerJoinData{
-			Player:  player,
-			Message: "",
-		})
-
-		sendJoinGame(c)
-
-		c.AsyncWrite(clientbound.PlayerPositionAndLook{
-			X:          0,
-			Y:          0,
-			Z:          0,
-			Yaw:        0,
-			Pitch:      0,
-			Flags:      0,
-			TeleportID: 0,
-		}.CreatePacket().Encode())
-
-		c.AsyncWrite(clientbound.ChunkData{
-			ChunkX:           0,
-			ChunkZ:           0,
-			FullChunk:        false,
-			PrimaryBitMask:   0,
-			Heightmaps:       pk.NBT{},
-			BiomesLength:     0,
-			Biomes:           nil,
-			Size:             0,
-			Data:             nil,
-			NumBlockEntities: 0,
-			BlockEntities:    nil,
-		}.Encode())
-
-		c.AsyncWrite(clientbound.SpawnPosition{Location: pk.Position{
-			X: 0,
-			Y: 0,
-			Z: 0,
-		}}.CreatePacket().Encode())
-
-		c.AsyncWrite(clientbound.PlayerPositionAndLook{
-			X:          0,
-			Y:          0,
-			Z:          0,
-			Yaw:        0,
-			Pitch:      0,
-			Flags:      0,
-			TeleportID: 0,
-		}.CreatePacket().Encode())
-
-	}
-
-	return nil
-}
-
-func sendJoinGame(c gnet.Conn) {
-	c.AsyncWrite(clientbound.JoinGame{
-		PlayerEntity: 12193,
-		Hardcore:     false,
-		Gamemode:     0,
-		PrevGamemode: 0,
-		WorldCount:   1,
-		WorldNames:   []pk.Identifier{"world"},
-		DimensionCodec: pk.NBT{
-			V: clientbound.DimensionCodec{
-				DimensionTypes: clientbound.DimensionTypeRegistry{
-					Type: "minecraft:dimension_type",
-					Value: []clientbound.DimensionTypeRegistryEntry{
-						{"minecraft:overworld",
-							0,
-							clientbound.MinecraftOverworld,
+		buf.Write(clientbound.JoinGame{
+			PlayerEntity: 12193,
+			Hardcore:     false,
+			Gamemode:     1,
+			PrevGamemode: 0,
+			WorldCount:   1,
+			WorldNames:   []pk.Identifier{"world"},
+			DimensionCodec: pk.NBT{
+				V: clientbound.DimensionCodec{
+					DimensionTypes: clientbound.DimensionTypeRegistry{
+						Type: "minecraft:dimension_type",
+						Value: []clientbound.DimensionTypeRegistryEntry{
+							{"minecraft:overworld",
+								0,
+								clientbound.MinecraftOverworld,
+							},
 						},
 					},
-				},
-				BiomeRegistry: clientbound.BiomeRegistry{
-					Type: "minecraft:worldgen/biome",
-					Value: []clientbound.BiomeRegistryEntry{
-						{
-							Name: "minecraft:plains",
-							ID:   1,
-							Element: clientbound.BiomeProperties{
-								Precipitation: "none",
-								Depth:         0.125,
-								Temperature:   0.8,
-								Scale:         0.05,
-								Downfall:      0.4,
-								Category:      "plains",
-								Effects: clientbound.BiomeEffects{
-									SkyColor:      7907327,
-									WaterFogColor: 329011,
-									FogColor:      12638463,
-									WaterColor:    4159204,
+					BiomeRegistry: clientbound.BiomeRegistry{
+						Type: "minecraft:worldgen/biome",
+						Value: []clientbound.BiomeRegistryEntry{
+							{
+								Name: "minecraft:plains",
+								ID:   1,
+								Element: clientbound.BiomeProperties{
+									Precipitation: "none",
+									Depth:         0.125,
+									Temperature:   0.8,
+									Scale:         0.05,
+									Downfall:      0.4,
+									Category:      "plains",
+									Effects: clientbound.BiomeEffects{
+										SkyColor:      0x00FF00,
+										WaterFogColor: 329011,
+										FogColor:      12638463,
+										WaterColor:    4159204,
+									},
 								},
 							},
 						},
 					},
-				},
-			}},
-		Dimension:    pk.NBT{V: clientbound.MinecraftOverworld},
-		WorldName:    "world",
-		HashedSeed:   0,
-		MaxPlayers:   20,
-		ViewDistance: 10,
-		RDI:          false,
-		ERS:          false,
-		IsDebug:      false,
-		IsFlat:       false,
-	}.CreatePacket().Encode())
+				}},
+			Dimension:    pk.NBT{V: clientbound.MinecraftOverworld},
+			WorldName:    "world",
+			HashedSeed:   0,
+			MaxPlayers:   20,
+			ViewDistance: 10,
+			RDI:          false,
+			ERS:          false,
+			IsDebug:      false,
+			IsFlat:       false,
+		}.CreatePacket().Encode())
+
+		return buf.Bytes(), nil
+	}
+
+	return nil, nil
 }
