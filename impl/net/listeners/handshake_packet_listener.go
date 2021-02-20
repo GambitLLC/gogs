@@ -4,15 +4,15 @@ import (
 	"errors"
 	"github.com/panjf2000/gnet"
 	"gogs/api"
+	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
-	"log"
 )
 
 type ConnectionState int8
 
 const (
 	status = 1
-	login = 2
+	login  = 2
 )
 
 type HandshakePacketListener struct {
@@ -39,7 +39,7 @@ func (listener HandshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) 
 	switch ConnectionState(nextState) {
 	case status:
 		c.SetContext(StatusPacketListener{
-			S: listener.S,
+			S:               listener.S,
 			protocolVersion: int32(protocolVersion),
 		})
 	case login:
@@ -48,7 +48,7 @@ func (listener HandshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) 
 			protocolVersion: int32(protocolVersion),
 		})
 	default:
-		log.Printf("Unhandled state %v", nextState)
+		logger.Printf("Unhandled state %v", nextState)
 		return errors.New("unhandled state")
 	}
 

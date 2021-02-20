@@ -17,8 +17,8 @@ func NewLoginEventListener() *LoginEventListener {
 
 func (listener LoginEventListener) Callback() func(*emitter.Client, emitter.Message) {
 	return func(client *emitter.Client, message emitter.Message) {
-		log.Println(message.Topic())
-		log.Println(string(message.Payload()))
+		logger.Println(message.Topic())
+		logger.Println(string(message.Payload()))
 	}
 }
 

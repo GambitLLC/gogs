@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/google/uuid"
 	"gogs/api/events"
+	"gogs/impl/logger"
 	"gogs/impl/net/packet/clientbound"
 	"log"
 	"time"
@@ -42,6 +43,7 @@ func (s *Server) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game
 	s.playerMap.uuidToPlayer[uuid] = player
 	s.playerMap.uuidToConn[uuid] = conn
 	s.playerMap.connToUUID[conn] = uuid
+
 	return player
 }
 
@@ -63,7 +65,7 @@ func (s *Server) Init() {
 				pk.String(event.Player.Name),
 			).Encode())
 			if err != nil {
-				log.Printf("error sending login success, %w", err)
+				logger.Printf("error sending login success, %w", err)
 			}
 		} else {
 			// TODO: send kick message
@@ -90,7 +92,7 @@ func (s *Server) Init() {
 			//	},
 			//}.Encode())
 			//if err != nil {
-			//	log.Printf("error sending player info, %w", err)
+			//	logger.Printf("error sending player info, %w", err)
 			//}
 			log.Print(c)
 			log.Print(clientbound.PlayerInfo{
@@ -116,28 +118,43 @@ func (s *Server) Init() {
 
 //On Server Start - Ready to accept connections
 func (s *Server) OnInitComplete(svr gnet.Server) gnet.Action {
-	log.Printf("Server listening for connections")
+	logger.Printf("Server listening for connections")
 	s.Init()
-	log.Printf("Server ready")
+	logger.Printf("Server ready")
 	return gnet.None
 }
 
 //On Server End - Event loop and all connections closed
 func (s *Server) OnShutdown(svr gnet.Server) {
-	log.Printf("Server shutting down")
+	logger.Printf("Server shutting down")
 }
 
 //On Connection Opened - Player either logging in or getting status
 func (s *Server) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
-	log.Printf("New connection received")
+	logger.Printf("New connection received")
 	c.SetContext(plists.HandshakePacketListener{S: s})
 	return nil, gnet.None
 }
 
 //On Connection Closed - A connection has been closed
 func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
-	log.Printf("Connection closed")
+	logger.Printf("Connection closed")
+
+	//clean up all the player state
 	delete(s.playerMap.uuidToConn, s.playerMap.connToUUID[c])
+	delete(s.playerMap.uuidToPlayer, s.playerMap.connToUUID[c])
+
+	//fast remove elem from slice - https://yourbasic.org/golang/delete-element-slice/
+	for i := 0; i < len(s.playerMap.all); i++ {
+		if s.playerMap.all[i].UUID == s.playerMap.connToUUID[c] {
+			_idx := len(s.playerMap.all) - 1
+			s.playerMap.all[i] = s.playerMap.all[_idx]
+			s.playerMap.all[_idx] = nil
+			s.playerMap.all = s.playerMap.all[:_idx]
+			break
+		}
+	}
+
 	delete(s.playerMap.connToUUID, c)
 
 	return gnet.None
@@ -147,14 +164,14 @@ func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
 func (s *Server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Action) {
 	packet, err := pk.Decode(bytes.NewReader(frame))
 	if err != nil {
-		log.Printf("error: %w", err)
+		logger.Printf("error: %w", err)
 		return nil, gnet.None
 	}
-	log.Printf("packet came in: %v", packet)
+	logger.Printf("packet came in: %v", *packet)
 
 	plist := c.Context().(plists.PacketListener)
 	if err := plist.HandlePacket(c, packet); err != nil {
-		log.Printf("failed to handle packet, got error: %w", err)
+		logger.Printf("failed to handle packet, got error: %w", err)
 		return nil, gnet.None
 	}
 
@@ -167,7 +184,6 @@ func (s *Server) Tick() (delay time.Duration, action gnet.Action) {
 	// TODO: probably game logic stuff
 	if s.tickCount%100 == 0 {
 		//send out keep-alive to all players
-		log.Println("[INFO] Sending out Keep-Alive!")
 		for i := 0; i < len(s.playerMap.all); i++ {
 			s.playerMap.uuidToConn[s.playerMap.all[i].UUID].AsyncWrite(clientbound.KeepAlive{
 				pk.Long(time.Now().UnixNano()),

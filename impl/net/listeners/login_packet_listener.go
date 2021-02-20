@@ -6,6 +6,7 @@ import (
 	"github.com/panjf2000/gnet"
 	"gogs/api"
 	"gogs/api/events"
+	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"log"
@@ -48,7 +49,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 		return err
 	}
 
-	log.Printf("received login from player %v", name)
+	logger.Printf("received login from player %v", name)
 
 	if len(name) > 16 {
 		// TODO: define packetid consts and use them
