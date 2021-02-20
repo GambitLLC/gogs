@@ -1,7 +1,7 @@
 package bedgg
 
 import (
-	"bedgg-server/api/listeners"
+	"gogs/api/listeners"
 	"fmt"
 	emitter "github.com/emitter-io/go/v2"
 	"strconv"

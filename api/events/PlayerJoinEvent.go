@@ -1,7 +1,7 @@
 package events
 
 import (
-	"bedgg-server/api/game"
+	"gogs/api/game"
 	emitter "github.com/emitter-io/go/v2"
 )
 
