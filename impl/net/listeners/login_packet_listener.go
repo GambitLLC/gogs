@@ -4,10 +4,10 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"github.com/panjf2000/gnet"
+	"gogs/api"
 	"gogs/api/events"
-	"gogs/api/game"
-	pk "gogs/net/packet"
-	"gogs/net/ptypes"
+	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/clientbound"
 	"log"
 )
 
@@ -19,6 +19,7 @@ const (
 )
 
 type LoginPacketListener struct {
+	S api.Server
 	protocolVersion int32
 	encrypt         bool
 	state           LoginState
@@ -70,27 +71,32 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 		*/
 		return errors.New("encryption (online mode) is not implemented")
 	} else {
-		c.SetContext(PlayPacketListener{listener.protocolVersion})
+		c.SetContext(PlayPacketListener{
+			S: listener.S,
+			protocolVersion: listener.protocolVersion,
+		})
+
+		player := listener.S.CreatePlayer(string(name), uuid.UUID(pk.NameToUUID(string(name))), c)
 		// trigger login event
 		events.PlayerLoginEvent.Trigger(&events.PlayerLoginData{
-			UUID: uuid.UUID(pk.NameToUUID(string(name))),
-			Name: string(name),
-			Conn: c,
+			Player: player,
 		})
 		
 		events.PlayerJoinEvent.Trigger(&events.PlayerJoinData{
-			Player:  game.Player{},
+			Player:  player,
 			Message: "",
 		})
 
 		sendJoinGame(c)
+
+
 	}
 
 	return nil
 }
 
 func sendJoinGame(c gnet.Conn) {
-	c.SendTo(ptypes.JoinGame{
+	c.SendTo(clientbound.JoinGame{
 		PlayerEntity: 12193,
 		Hardcore:     false,
 		Gamemode:     0,
@@ -98,30 +104,30 @@ func sendJoinGame(c gnet.Conn) {
 		WorldCount:   1,
 		WorldNames:   []pk.Identifier{"world"},
 		DimensionCodec: pk.NBT{
-			V: ptypes.DimensionCodec{
-				DimensionTypes: ptypes.DimensionTypeRegistry{
+			V: clientbound.DimensionCodec{
+				DimensionTypes: clientbound.DimensionTypeRegistry{
 					Type: "minecraft:dimension_type",
-					Value: []ptypes.DimensionTypeRegistryEntry{
+					Value: []clientbound.DimensionTypeRegistryEntry{
 						{"minecraft:overworld",
 							0,
-							ptypes.MinecraftOverworld,
+							clientbound.MinecraftOverworld,
 						},
 					},
 				},
-				BiomeRegistry: ptypes.BiomeRegistry{
+				BiomeRegistry: clientbound.BiomeRegistry{
 					Type:  "minecraft:worldgen/biome",
-					Value: []ptypes.BiomeRegistryEntry{
+					Value: []clientbound.BiomeRegistryEntry{
 						{
 							Name: "minecraft:plains",
 							ID:   1,
-							Element: ptypes.BiomeProperties{
+							Element: clientbound.BiomeProperties{
 								Precipitation: "none",
 								Depth:         0.125,
 								Temperature:   0.8,
 								Scale:         0.05,
 								Downfall:      0.4,
 								Category:      "plains",
-								Effects: ptypes.BiomeEffects{
+								Effects: clientbound.BiomeEffects{
 									SkyColor:      7907327,
 									WaterFogColor: 329011,
 									FogColor:      12638463,
@@ -132,7 +138,7 @@ func sendJoinGame(c gnet.Conn) {
 					},
 				},
 			}},
-		Dimension:    pk.NBT{V: ptypes.MinecraftOverworld},
+		Dimension:    pk.NBT{V: clientbound.MinecraftOverworld},
 		WorldName:    "world",
 		HashedSeed:   0,
 		MaxPlayers:   20,

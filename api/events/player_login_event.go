@@ -1,8 +1,7 @@
 package events
 
 import (
-	"github.com/google/uuid"
-	"github.com/panjf2000/gnet"
+	"gogs/api/game"
 )
 
 type PlayerLoginResult int8
@@ -18,9 +17,7 @@ const (
 var PlayerLoginEvent playerLoginEvent
 
 type PlayerLoginData struct {
-	UUID uuid.UUID
-	Name string
-	Conn gnet.Conn
+	Player *game.Player
 	Result PlayerLoginResult
 	KickMessage string
 }

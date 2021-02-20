@@ -2,7 +2,7 @@ package listeners
 
 import (
 	"github.com/panjf2000/gnet"
-	pk "gogs/net/packet"
+	pk "gogs/impl/net/packet"
 )
 
 type PacketListener interface {

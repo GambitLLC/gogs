@@ -1,7 +1,7 @@
-package ptypes
+package clientbound
 
 import (
-	pk "gogs/net/packet"
+	pk "gogs/impl/net/packet"
 )
 
 type worldNames []pk.Identifier
@@ -16,17 +16,17 @@ func (a worldNames) Encode() []byte {
 
 type DimensionCodec struct {
 	DimensionTypes DimensionTypeRegistry `nbt:"minecraft:dimension_type"`
-	BiomeRegistry BiomeRegistry `nbt:"minecraft:worldgen/biome"`
+	BiomeRegistry  BiomeRegistry         `nbt:"minecraft:worldgen/biome"`
 }
 
 type DimensionTypeRegistry struct {
-	Type string `nbt:"type"`
+	Type string                        `nbt:"type"`
 	Value []DimensionTypeRegistryEntry `nbt:"value"`
 }
 
 type DimensionTypeRegistryEntry struct {
-	Name string `nbt:"name"`
-	ID int32 `nbt:"id"`
+	Name    string        `nbt:"name"`
+	ID      int32         `nbt:"id"`
 	Element DimensionType `nbt:"element"`
 }
 
@@ -63,24 +63,24 @@ var MinecraftOverworld = DimensionType{
 }
 
 type BiomeRegistry struct {
-	Type string `nbt:"type"`
+	Type string                `nbt:"type"`
 	Value []BiomeRegistryEntry `nbt:"value"`
 }
 
 type BiomeRegistryEntry struct {
-	Name string `nbt:"name"`
-	ID int32 `nbt:"id"`
+	Name    string          `nbt:"name"`
+	ID      int32           `nbt:"id"`
 	Element BiomeProperties `nbt:"element"`
 }
 
 type BiomeProperties struct {
-	Precipitation string `nbt:"precipitation"`
-	Depth float32 `nbt:"depth"`
-	Temperature float32 `nbt:"temperature"`
-	Scale float32 `nbt:"scale"`
-	Downfall float32 `nbt:"downfall"`
-	Category string `nbt:"category"`
-	Effects BiomeEffects `nbt:"effects"`
+	Precipitation string       `nbt:"precipitation"`
+	Depth         float32      `nbt:"depth"`
+	Temperature   float32      `nbt:"temperature"`
+	Scale         float32      `nbt:"scale"`
+	Downfall      float32      `nbt:"downfall"`
+	Category      string       `nbt:"category"`
+	Effects       BiomeEffects `nbt:"effects"`
 }
 
 type BiomeEffects struct {
@@ -91,22 +91,22 @@ type BiomeEffects struct {
 }
 
 type JoinGame struct {
-	PlayerEntity pk.Int
-	Hardcore     pk.Boolean
-	Gamemode     pk.UByte
-	PrevGamemode pk.Byte
-	WorldCount   pk.VarInt
-	WorldNames   worldNames	// Array of Identifiers
+	PlayerEntity   pk.Int
+	Hardcore       pk.Boolean
+	Gamemode       pk.UByte
+	PrevGamemode   pk.Byte
+	WorldCount     pk.VarInt
+	WorldNames     worldNames // Array of Identifiers
 	DimensionCodec pk.NBT
-	Dimension    pk.NBT
-	WorldName    pk.Identifier
-	HashedSeed   pk.Long
-	MaxPlayers   pk.VarInt // Now ignored
-	ViewDistance pk.VarInt
-	RDI          pk.Boolean // Reduced Debug Info
-	ERS          pk.Boolean // Enable respawn screen
-	IsDebug      pk.Boolean
-	IsFlat       pk.Boolean
+	Dimension      pk.NBT
+	WorldName      pk.Identifier
+	HashedSeed     pk.Long
+	MaxPlayers     pk.VarInt // Now ignored
+	ViewDistance   pk.VarInt
+	RDI            pk.Boolean // Reduced Debug Info
+	ERS            pk.Boolean // Enable respawn screen
+	IsDebug        pk.Boolean
+	IsFlat         pk.Boolean
 }
 
 func (s JoinGame) CreatePacket() pk.Packet {

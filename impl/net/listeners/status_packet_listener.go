@@ -3,10 +3,12 @@ package listeners
 import (
 	"errors"
 	"github.com/panjf2000/gnet"
-	pk "gogs/net/packet"
+	"gogs/api"
+	pk "gogs/impl/net/packet"
 )
 
 type StatusPacketListener struct {
+	S api.Server
 	protocolVersion int32
 }
 

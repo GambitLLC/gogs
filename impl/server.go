@@ -10,7 +10,7 @@ import (
 	"github.com/panjf2000/gnet"
 	"gogs/api/game"
 	plists "gogs/impl/net/listeners"
-	pk "gogs/net/packet"
+	pk "gogs/impl/net/packet"
 )
 
 type playerMapping struct {
@@ -19,29 +19,31 @@ type playerMapping struct {
 	uuidToConn map[uuid.UUID]gnet.Conn
 }
 
-func (m *playerMapping) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game.Player {
-	player, exists := m.uuidToPlayer[uuid]
+type Server struct {
+	gnet.EventServer
+
+	playerMap *playerMapping
+}
+
+func (s *Server) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game.Player {
+	player, exists := s.playerMap.uuidToPlayer[uuid]
 	if exists {
+		// TODO: figure out what happens to players who connect twice
+		s.playerMap.uuidToConn[uuid] = conn
 		return player
 	}
 	player = &game.Player{
 		UUID: uuid,
 		Name: name,
 	}
-	m.all = append(m.all, player)
-	m.uuidToPlayer[uuid] = player
-	m.uuidToConn[uuid] = conn
+	s.playerMap.all = append(s.playerMap.all, player)
+	s.playerMap.uuidToPlayer[uuid] = player
+	s.playerMap.uuidToConn[uuid] = conn
 	return player
 }
 
-type Server struct {
-	gnet.EventServer
-
-	players *playerMapping
-}
-
-func (s *Server) Load() {
-	s.players = &playerMapping{
+func (s *Server) Init() {
+	s.playerMap = &playerMapping{
 		uuidToPlayer: make(map[uuid.UUID]*game.Player),
 		uuidToConn:   make(map[uuid.UUID]gnet.Conn),
 	}
@@ -49,12 +51,13 @@ func (s *Server) Load() {
 
 	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
 	events.PlayerLoginEvent.RegisterNet(func(data *events.PlayerLoginData) {
+		c := s.playerMap.uuidToConn[data.Player.UUID]
 		// send login success
 		if data.Result == events.LoginAllowed {
-			err := data.Conn.SendTo(pk.Marshal(
+			err := c.SendTo(pk.Marshal(
 				0x02,
-				pk.UUID(data.UUID),
-				pk.String(data.Name),
+				pk.UUID(data.Player.UUID),
+				pk.String(data.Player.Name),
 			).Encode())
 			if err != nil {
 				log.Printf("error sending login success, %w", err)
@@ -68,7 +71,7 @@ func (s *Server) Load() {
 //On Server Start - Ready to accept connections
 func (s *Server) OnInitComplete(svr gnet.Server) gnet.Action {
 	log.Printf("Server listening for connections")
-	s.Load()
+	s.Init()
 	log.Printf("Server ready")
 	return gnet.None
 }
@@ -81,7 +84,7 @@ func (s *Server) OnShutdown(svr gnet.Server) {
 //On Connection Opened - Player either logging in or getting status
 func (s *Server) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
 	log.Printf("New connection received")
-	c.SetContext(plists.HandshakePacketListener{})
+	c.SetContext(plists.HandshakePacketListener{S: s})
 	return nil, gnet.None
 }
 

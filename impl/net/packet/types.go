@@ -8,8 +8,8 @@ import (
 	"io"
 	"math"
 
-	"github.com/google/uuid"
 	"github.com/Tnze/go-mc/nbt"
+	"github.com/google/uuid"
 )
 
 // Field represents a field in a packet. Can be Encoded & Decoded
