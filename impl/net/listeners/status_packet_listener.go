@@ -7,6 +7,7 @@ import (
 	"gogs/api"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
+	"gogs/impl/net/packet/serverbound"
 )
 
 type StatusPacketListener struct {
@@ -30,13 +31,13 @@ func (listener StatusPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) err
 
 	//QueryPongPacket
 	case 0x01:
-		var payload pk.Long
-		if err := p.Unmarshal(&payload); err != nil {
+		ping := serverbound.QueryStatusPing{}
+		if err := ping.FromPacket(p); err != nil {
 			return err
 		}
 
 		if err := c.AsyncWrite(clientbound.QueryStatusPong{
-			Payload: payload,
+			Payload: ping.Payload,
 		}.CreatePacket().Encode()); err != nil {
 			return err
 		}
