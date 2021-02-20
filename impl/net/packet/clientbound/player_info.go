@@ -8,28 +8,33 @@ import (
 type PlayerInfo struct {
 	Action     pk.VarInt
 	NumPlayers pk.VarInt
-	Players     []pk.Encodable
+	Players    players
 }
 
-func (s PlayerInfo) Encode() []byte {
+func (s PlayerInfo) CreatePacket() pk.Packet {
+	// TODO: create packetid consts
+	return pk.Marshal(0x32, s.Action, s.NumPlayers, s.Players)
+}
+
+type players []pk.Encodable
+
+func (a players) Encode() []byte {
 	buf := bytes.Buffer{}
-	buf.Write(s.Action.Encode())
-	buf.Write(s.NumPlayers.Encode())
-	for _, v := range s.Players {
+	for _, v := range a {
 		buf.Write(v.Encode())
 	}
 	return buf.Bytes()
 }
 
 type PlayerInfoAddPlayer struct {
-	UUID pk.UUID
-	Name pk.String	// 16
-	NumProperties pk.VarInt
-	Properties Properties
-	Gamemode pk.VarInt
-	Ping pk.VarInt
+	UUID           pk.UUID
+	Name           pk.String // 16
+	NumProperties  pk.VarInt
+	Properties     Properties
+	Gamemode       pk.VarInt
+	Ping           pk.VarInt
 	HasDisplayName pk.Boolean
-	DisplayName pk.Chat	// Optional
+	DisplayName    pk.Chat // Optional
 }
 
 type Property struct {

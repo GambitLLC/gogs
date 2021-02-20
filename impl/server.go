@@ -6,7 +6,6 @@ import (
 	"gogs/api/events"
 	"gogs/impl/logger"
 	"gogs/impl/net/packet/clientbound"
-	"log"
 	"strconv"
 	"time"
 
@@ -78,27 +77,7 @@ func (s *Server) Init() {
 	events.PlayerJoinEvent.RegisterNet(func(data *events.PlayerJoinData) {
 		player := data.Player
 		for _, c := range s.playerMap.uuidToConn {
-			//err := c.SendTo(clientbound.PlayerInfo{
-			//	Action:     0,
-			//	NumPlayers: 1,
-			//	Players:     []pk.Encodable{
-			//		clientbound.PlayerInfoAddPlayer{
-			//			UUID: 			pk.UUID(player.UUID),
-			//			Name:           pk.String(player.Name),
-			//			NumProperties:  pk.VarInt(0),
-			//			Properties:     nil,
-			//			Gamemode:       pk.VarInt(0),
-			//			Ping:           pk.VarInt(0),
-			//			HasDisplayName: false,
-			//			DisplayName:    "",
-			//		},
-			//	},
-			//}.Encode())
-			//if err != nil {
-			//	logger.Printf("error sending player info, %w", err)
-			//}
-			log.Print(c)
-			log.Print(clientbound.PlayerInfo{
+			err := c.AsyncWrite(clientbound.PlayerInfo{
 				Action:     0,
 				NumPlayers: 1,
 				Players: []pk.Encodable{
@@ -113,7 +92,10 @@ func (s *Server) Init() {
 						DisplayName:    "",
 					},
 				},
-			})
+			}.CreatePacket().Encode())
+			if err != nil {
+				logger.Printf("error sending player info, %w", err)
+			}
 		}
 	})
 
