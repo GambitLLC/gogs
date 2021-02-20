@@ -26,7 +26,7 @@ func main() {
 		return
 	}
 
-	err = io.RegisterNewSubscriber(c, &listeners.LoginListener{})
+	err = io.RegisterNewSubscriber(c, listeners.NewLoginEventListener())
 	if err != nil {
 		log.Fatal(err)
 		return

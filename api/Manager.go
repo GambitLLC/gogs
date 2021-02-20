@@ -12,5 +12,5 @@ func (es *Manager) init() {
 }
 
 func (es *Manager) addPlayer(player game.Player) {
-	es.playerMap[player.GetUUID()] = player
+	es.playerMap[player.UUID.String()] = player
 }

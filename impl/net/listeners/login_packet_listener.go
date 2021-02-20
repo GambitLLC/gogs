@@ -6,7 +6,6 @@ import (
 	"github.com/panjf2000/gnet"
 	"gogs/api/events"
 	"gogs/api/game"
-	"gogs/impl"
 	pk "gogs/net/packet"
 	"gogs/net/ptypes"
 	"log"
@@ -20,7 +19,6 @@ const (
 )
 
 type LoginPacketListener struct {
-	S *impl.Server
 	protocolVersion int32
 	encrypt         bool
 	state           LoginState
@@ -72,7 +70,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 		*/
 		return errors.New("encryption (online mode) is not implemented")
 	} else {
-		c.SetContext(PlayPacketListener{listener.S, listener.protocolVersion})
+		c.SetContext(PlayPacketListener{listener.protocolVersion})
 		// trigger login event
 		events.PlayerLoginEvent.Trigger(&events.PlayerLoginData{
 			UUID: uuid.UUID(pk.NameToUUID(string(name))),

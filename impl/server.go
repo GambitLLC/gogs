@@ -19,22 +19,19 @@ type playerMapping struct {
 	uuidToConn map[uuid.UUID]gnet.Conn
 }
 
-func (m *playerMapping) CreatePlayer(name string, uuid uuid.UUID) bool {
-	_, exists := m.uuidToPlayer[uuid]
+func (m *playerMapping) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game.Player {
+	player, exists := m.uuidToPlayer[uuid]
 	if exists {
-		return false
+		return player
 	}
-	player := game.Player{
+	player = &game.Player{
 		UUID: uuid,
 		Name: name,
 	}
-	m.all = append(m.all, &player)
-	m.uuidToPlayer[uuid] = &player
-	return true
-}
-
-func (m *playerMapping) Add(data *events.PlayerLoginData) {
-	m.uuidToConn[data.UUID] = data.Conn
+	m.all = append(m.all, player)
+	m.uuidToPlayer[uuid] = player
+	m.uuidToConn[uuid] = conn
+	return player
 }
 
 type Server struct {
@@ -51,7 +48,6 @@ func (s *Server) Load() {
 	// TODO: set up Server initialization (world, etc)
 
 	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
-	events.PlayerLoginEvent.Register(s.players.Add)
 	events.PlayerLoginEvent.RegisterNet(func(data *events.PlayerLoginData) {
 		// send login success
 		if data.Result == events.LoginAllowed {
@@ -85,7 +81,7 @@ func (s *Server) OnShutdown(svr gnet.Server) {
 //On Connection Opened - Player either logging in or getting status
 func (s *Server) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
 	log.Printf("New connection received")
-	c.SetContext(plists.HandshakePacketListener{S: s})
+	c.SetContext(plists.HandshakePacketListener{})
 	return nil, gnet.None
 }
 
