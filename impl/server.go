@@ -23,7 +23,7 @@ type playerMapping struct {
 
 type Server struct {
 	gnet.EventServer
-
+	tickCount uint64
 	playerMap *playerMapping
 }
 
@@ -152,7 +152,6 @@ func (s *Server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Actio
 	}
 	log.Printf("packet came in: %v", packet)
 
-
 	plist := c.Context().(plists.PacketListener)
 	if err := plist.HandlePacket(c, packet); err != nil {
 		log.Printf("failed to handle packet, got error: %w", err)
@@ -165,8 +164,17 @@ func (s *Server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Actio
 //On tick
 func (s *Server) Tick() (delay time.Duration, action gnet.Action) {
 	startTime := time.Now()
-
 	// TODO: probably game logic stuff
+	if s.tickCount%100 == 0 {
+		//send out keep-alive to all players
+		log.Println("[INFO] Sending out Keep-Alive!")
+		for i := 0; i < len(s.playerMap.all); i++ {
+			s.playerMap.uuidToConn[s.playerMap.all[i].UUID].AsyncWrite(clientbound.KeepAlive{
+				pk.Long(time.Now().UnixNano()),
+			}.CreatePacket().Encode())
+		}
+	}
 
+	s.tickCount++
 	return time.Duration(50000000 - time.Since(startTime).Nanoseconds()), gnet.None
 }

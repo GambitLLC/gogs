@@ -10,7 +10,7 @@ import (
 )
 
 type PlayPacketListener struct {
-	S api.Server
+	S               api.Server
 	protocolVersion int32
 }
 
@@ -26,6 +26,13 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) error
 		if err := s.FromPacket(p); err != nil {
 			return err
 		}
+	case 0x10:
+		//TODO: kick client for incorrect / untimely Keep-Alive response
+		s := serverbound.KeepAlive{}
+		if err := s.FromPacket(p); err != nil {
+			return err
+		}
+
 	default:
 		return errors.New("not yet implemented")
 	}

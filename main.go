@@ -9,6 +9,6 @@ import (
 func main() {
 	MinecraftServer := new(impl.Server)
 	log.Fatal(
-		gnet.Serve(MinecraftServer, "tcp://0.0.0.0:25565", gnet.WithMulticore(true)),
+		gnet.Serve(MinecraftServer, "tcp://0.0.0.0:25565", gnet.WithMulticore(true), gnet.WithTicker(true)),
 	)
 }

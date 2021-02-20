@@ -7,7 +7,6 @@ import (
 	"gogs/api"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
-	"log"
 )
 
 type StatusPacketListener struct {
@@ -17,8 +16,6 @@ type StatusPacketListener struct {
 
 func (listener StatusPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) error {
 	//respond with query pong packet
-	log.Printf("[INFO] Packet recieved: %v", p)
-
 	switch p.ID {
 	//QueryResponsePacket
 	case 0x00:
@@ -48,5 +45,6 @@ func (listener StatusPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) err
 	default:
 		return errors.New(fmt.Sprintf("Illegal packet id recieved: %02X", p.ID))
 	}
+
 	return nil
 }
