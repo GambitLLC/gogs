@@ -7,10 +7,8 @@ import (
 )
 
 func main() {
-	go func() {
-		MinecraftServer := new(impl.Server)
-		log.Fatal(
-			gnet.Serve(MinecraftServer, "tcp://0.0.0.0:25565", gnet.WithMulticore(true)),
-		)
-	}()
+	MinecraftServer := new(impl.Server)
+	log.Fatal(
+		gnet.Serve(MinecraftServer, "tcp://0.0.0.0:25565", gnet.WithMulticore(true)),
+	)
 }

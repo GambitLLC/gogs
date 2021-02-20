@@ -26,5 +26,7 @@ func (e *playerJoinEvent) Trigger(data *PlayerJoinData) {
 	for _, handler := range e.handlers {
 		handler(data)
 	}
-	e.netHandler(data)
+	if e.netHandler != nil {
+		e.netHandler(data)
+	}
 }

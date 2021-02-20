@@ -4,6 +4,33 @@ import (
 	pk "gogs/impl/net/packet"
 )
 
+type JoinGame struct {
+	PlayerEntity   pk.Int
+	Hardcore       pk.Boolean
+	Gamemode       pk.UByte
+	PrevGamemode   pk.Byte
+	WorldCount     pk.VarInt
+	WorldNames     worldNames // Array of Identifiers
+	DimensionCodec pk.NBT
+	Dimension      pk.NBT
+	WorldName      pk.Identifier
+	HashedSeed     pk.Long
+	MaxPlayers     pk.VarInt // Now ignored
+	ViewDistance   pk.VarInt
+	RDI            pk.Boolean // Reduced Debug Info
+	ERS            pk.Boolean // Enable respawn screen
+	IsDebug        pk.Boolean
+	IsFlat         pk.Boolean
+}
+
+func (s JoinGame) CreatePacket() pk.Packet {
+	// TODO: create packetid consts
+	return pk.Marshal(0x24, s.PlayerEntity, s.Hardcore, s.Gamemode,
+		s.PrevGamemode, s.WorldCount, s.WorldNames, s.DimensionCodec,
+		s.Dimension, s.WorldName, s.HashedSeed, s.MaxPlayers, s.ViewDistance,
+		s.RDI, s.ERS, s.IsDebug, s.IsFlat)
+}
+
 type worldNames []pk.Identifier
 
 func (a worldNames) Encode() []byte {
@@ -88,31 +115,4 @@ type BiomeEffects struct {
 	WaterFogColor int32 `nbt:"water_fog_color"`
 	FogColor int32 `nbt:"fog_color"`
 	WaterColor int32 `nbt:"water_color"`
-}
-
-type JoinGame struct {
-	PlayerEntity   pk.Int
-	Hardcore       pk.Boolean
-	Gamemode       pk.UByte
-	PrevGamemode   pk.Byte
-	WorldCount     pk.VarInt
-	WorldNames     worldNames // Array of Identifiers
-	DimensionCodec pk.NBT
-	Dimension      pk.NBT
-	WorldName      pk.Identifier
-	HashedSeed     pk.Long
-	MaxPlayers     pk.VarInt // Now ignored
-	ViewDistance   pk.VarInt
-	RDI            pk.Boolean // Reduced Debug Info
-	ERS            pk.Boolean // Enable respawn screen
-	IsDebug        pk.Boolean
-	IsFlat         pk.Boolean
-}
-
-func (s JoinGame) CreatePacket() pk.Packet {
-	// TODO: create packetid consts
-	return pk.Marshal(0x24, s.PlayerEntity, s.Hardcore, s.Gamemode,
-		s.PrevGamemode, s.WorldCount, s.WorldNames, s.DimensionCodec,
-		s.Dimension, s.WorldName, s.HashedSeed, s.MaxPlayers, s.ViewDistance,
-		s.RDI, s.ERS, s.IsDebug, s.IsFlat)
 }

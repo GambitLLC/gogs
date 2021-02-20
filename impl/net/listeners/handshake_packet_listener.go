@@ -21,6 +21,7 @@ type HandshakePacketListener struct {
 
 func (listener HandshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) error {
 	if p.ID != 0 {
+		c.Close()
 		return errors.New("handshake expects Packet ID 0")
 	}
 

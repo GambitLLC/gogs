@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/google/uuid"
 	"gogs/api/events"
+	"gogs/impl/net/packet/clientbound"
 	"log"
 	"time"
 
@@ -66,6 +67,50 @@ func (s *Server) Init() {
 			// TODO: send kick message
 		}
 	})
+
+
+	events.PlayerJoinEvent.RegisterNet(func(data *events.PlayerJoinData) {
+		player := data.Player
+		for _, c := range s.playerMap.uuidToConn {
+			//err := c.SendTo(clientbound.PlayerInfo{
+			//	Action:     0,
+			//	NumPlayers: 1,
+			//	Players:     []pk.Encodable{
+			//		clientbound.PlayerInfoAddPlayer{
+			//			UUID: 			pk.UUID(player.UUID),
+			//			Name:           pk.String(player.Name),
+			//			NumProperties:  pk.VarInt(0),
+			//			Properties:     nil,
+			//			Gamemode:       pk.VarInt(0),
+			//			Ping:           pk.VarInt(0),
+			//			HasDisplayName: false,
+			//			DisplayName:    "",
+			//		},
+			//	},
+			//}.Encode())
+			//if err != nil {
+			//	log.Printf("error sending player info, %w", err)
+			//}
+			log.Print(c)
+			log.Print(clientbound.PlayerInfo{
+					Action:     0,
+					NumPlayers: 1,
+					Players:     []pk.Encodable{
+						clientbound.PlayerInfoAddPlayer{
+							UUID: 			pk.UUID(player.UUID),
+							Name:           pk.String(player.Name),
+							NumProperties:  pk.VarInt(0),
+							Properties:     nil,
+							Gamemode:       pk.VarInt(0),
+							Ping:           pk.VarInt(0),
+							HasDisplayName: false,
+							DisplayName:    "",
+						},
+					},
+				})
+		}
+	})
+
 }
 
 //On Server Start - Ready to accept connections
@@ -98,16 +143,15 @@ func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
 func (s *Server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Action) {
 	packet, err := pk.Decode(bytes.NewReader(frame))
 	if err != nil {
-		// TODO: Should connections really be closed on error?
 		log.Printf("error: %w", err)
-		return nil, gnet.Close
+		return nil, gnet.None
 	}
 	log.Printf("packet came in: %v", packet)
 
 	plist := c.Context().(plists.PacketListener)
 	if err := plist.HandlePacket(c, packet); err != nil {
 		log.Printf("failed to handle packet, got error: %w", err)
-		return nil, gnet.Close
+		return nil, gnet.None
 	}
 
 	return nil, gnet.None

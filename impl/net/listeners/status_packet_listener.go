@@ -13,5 +13,6 @@ type StatusPacketListener struct {
 }
 
 func (listener StatusPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) error {
+	c.Close()
 	return errors.New("not yet implemented")
 }
