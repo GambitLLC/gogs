@@ -57,7 +57,7 @@ func (s *Server) Init() {
 	events.PlayerLoginEvent.RegisterNet(func(event *events.PlayerLoginData) {
 		// send login success
 		if event.Result == events.LoginAllowed {
-			err := event.Conn.SendTo(pk.Marshal(
+			err := event.Conn.AsyncWrite(pk.Marshal(
 				0x02,
 				pk.UUID(event.Player.UUID),
 				pk.String(event.Player.Name),
@@ -151,6 +151,7 @@ func (s *Server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Actio
 		return nil, gnet.None
 	}
 	log.Printf("packet came in: %v", packet)
+
 
 	plist := c.Context().(plists.PacketListener)
 	if err := plist.HandlePacket(c, packet); err != nil {

@@ -30,7 +30,6 @@ func (listener LoginPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) erro
 	case start:
 		return listener.handleLoginStart(c, p)
 	case encrypt:
-		c.Close()
 		return errors.New("not yet implemented")
 	default:
 		log.Panicf("Unhandled state in LoginPacketListener: %v", listener.state)
@@ -40,14 +39,12 @@ func (listener LoginPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) erro
 
 func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet) error {
 	if p.ID != 0 {
-		c.Close()
 		return errors.New("login start expects Packet ID 0")
 	}
 
 	var name pk.String
 
 	if err := p.Unmarshal(&name); err != nil {
-		c.Close()
 		return err
 	}
 
@@ -56,8 +53,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 	if len(name) > 16 {
 		// TODO: define packetid consts and use them
 		// send disconnect
-		c.SendTo(pk.Marshal(0x00, pk.Chat("username too long")).Encode())
-		c.Close()
+		c.AsyncWrite(pk.Marshal(0x00, pk.Chat("username too long")).Encode())
 		return errors.New("username too long")
 	}
 
@@ -73,7 +69,6 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 				pk.ByteArray([]byte("s")), // verify token in bytes
 			).Encode()
 		*/
-		c.Close()
 		return errors.New("encryption (online mode) is not implemented")
 	} else {
 		c.SetContext(PlayPacketListener{
@@ -95,7 +90,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 
 		sendJoinGame(c)
 
-		c.SendTo(clientbound.PlayerPositionAndLook{
+		c.AsyncWrite(clientbound.PlayerPositionAndLook{
 			X:          0,
 			Y:          0,
 			Z:          0,
@@ -105,7 +100,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 			TeleportID: 0,
 		}.CreatePacket().Encode())
 
-		c.SendTo(clientbound.ChunkData{
+		c.AsyncWrite(clientbound.ChunkData{
 			ChunkX:           0,
 			ChunkZ:           0,
 			FullChunk:        false,
@@ -119,13 +114,13 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 			BlockEntities:    nil,
 		}.Encode())
 
-		c.SendTo(clientbound.SpawnPosition{Location: pk.Position{
+		c.AsyncWrite(clientbound.SpawnPosition{Location: pk.Position{
 			X: 0,
 			Y: 0,
 			Z: 0,
 		}}.CreatePacket().Encode())
 
-		c.SendTo(clientbound.PlayerPositionAndLook{
+		c.AsyncWrite(clientbound.PlayerPositionAndLook{
 			X:          0,
 			Y:          0,
 			Z:          0,
@@ -141,7 +136,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 }
 
 func sendJoinGame(c gnet.Conn) {
-	c.SendTo(clientbound.JoinGame{
+	c.AsyncWrite(clientbound.JoinGame{
 		PlayerEntity: 12193,
 		Hardcore:     false,
 		Gamemode:     0,
