@@ -2,7 +2,7 @@ package listeners
 
 import (
 	emitter "github.com/emitter-io/go/v2"
-	"log"
+	"gogs/impl/logger"
 )
 
 type LoginEventListener struct {
@@ -17,8 +17,8 @@ func NewLoginEventListener() *LoginEventListener {
 
 func (listener LoginEventListener) Callback() func(*emitter.Client, emitter.Message) {
 	return func(client *emitter.Client, message emitter.Message) {
-		logger.Println(message.Topic())
-		logger.Println(string(message.Payload()))
+		logger.Printf(message.Topic())
+		logger.Printf(string(message.Payload()))
 	}
 }
 
