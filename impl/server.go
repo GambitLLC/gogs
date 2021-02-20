@@ -7,6 +7,7 @@ import (
 	"gogs/impl/logger"
 	"gogs/impl/net/packet/clientbound"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/panjf2000/gnet"
@@ -23,6 +24,8 @@ type playerMapping struct {
 }
 
 type Server struct {
+	Host string
+	Port uint16
 	gnet.EventServer
 	tickCount uint64
 	playerMap *playerMapping
@@ -118,9 +121,9 @@ func (s *Server) Init() {
 
 //On Server Start - Ready to accept connections
 func (s *Server) OnInitComplete(svr gnet.Server) gnet.Action {
-	logger.Printf("Server listening for connections")
+	logger.Printf("gogs - a blazingly fast minecraft server")
 	s.Init()
-	logger.Printf("Server ready")
+	logger.Printf("Server listening for connections on tcp://" + s.Host + ":" + strconv.Itoa(int(s.Port)))
 	return gnet.None
 }
 
