@@ -19,7 +19,7 @@ const (
 )
 
 type LoginPacketListener struct {
-	S api.Server
+	S               api.Server
 	protocolVersion int32
 	encrypt         bool
 	state           LoginState
@@ -64,20 +64,20 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 	// TODO: send encryption request
 	if listener.encrypt {
 		/*
-		out = pk.Marshal(
-			0x01,
-			pk.String(""),    // Server ID
-			pk.VarInt(1),    // public key length
-			pk.ByteArray([]byte("s")), // public key in bytes
-			pk.VarInt(1),    // verify token length
-			pk.ByteArray([]byte("s")), // verify token in bytes
-		).Encode()
+			out = pk.Marshal(
+				0x01,
+				pk.String(""),    // Server ID
+				pk.VarInt(1),    // public key length
+				pk.ByteArray([]byte("s")), // public key in bytes
+				pk.VarInt(1),    // verify token length
+				pk.ByteArray([]byte("s")), // verify token in bytes
+			).Encode()
 		*/
 		c.Close()
 		return errors.New("encryption (online mode) is not implemented")
 	} else {
 		c.SetContext(PlayPacketListener{
-			S: listener.S,
+			S:               listener.S,
 			protocolVersion: listener.protocolVersion,
 		})
 
@@ -85,8 +85,9 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 		// trigger login event
 		events.PlayerLoginEvent.Trigger(&events.PlayerLoginData{
 			Player: player,
+			Conn:   c,
 		})
-		
+
 		events.PlayerJoinEvent.Trigger(&events.PlayerJoinData{
 			Player:  player,
 			Message: "",
@@ -159,7 +160,7 @@ func sendJoinGame(c gnet.Conn) {
 					},
 				},
 				BiomeRegistry: clientbound.BiomeRegistry{
-					Type:  "minecraft:worldgen/biome",
+					Type: "minecraft:worldgen/biome",
 					Value: []clientbound.BiomeRegistryEntry{
 						{
 							Name: "minecraft:plains",

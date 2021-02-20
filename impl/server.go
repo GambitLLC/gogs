@@ -15,9 +15,10 @@ import (
 )
 
 type playerMapping struct {
-	all []*game.Player
+	all          []*game.Player
 	uuidToPlayer map[uuid.UUID]*game.Player
-	uuidToConn map[uuid.UUID]gnet.Conn
+	uuidToConn   map[uuid.UUID]gnet.Conn
+	connToUUID   map[gnet.Conn]uuid.UUID
 }
 
 type Server struct {
@@ -40,6 +41,7 @@ func (s *Server) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game
 	s.playerMap.all = append(s.playerMap.all, player)
 	s.playerMap.uuidToPlayer[uuid] = player
 	s.playerMap.uuidToConn[uuid] = conn
+	s.playerMap.connToUUID[conn] = uuid
 	return player
 }
 
@@ -47,18 +49,18 @@ func (s *Server) Init() {
 	s.playerMap = &playerMapping{
 		uuidToPlayer: make(map[uuid.UUID]*game.Player),
 		uuidToConn:   make(map[uuid.UUID]gnet.Conn),
+		connToUUID:   make(map[gnet.Conn]uuid.UUID),
 	}
 	// TODO: set up Server initialization (world, etc)
 
 	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
-	events.PlayerLoginEvent.RegisterNet(func(data *events.PlayerLoginData) {
-		c := s.playerMap.uuidToConn[data.Player.UUID]
+	events.PlayerLoginEvent.RegisterNet(func(event *events.PlayerLoginData) {
 		// send login success
-		if data.Result == events.LoginAllowed {
-			err := c.SendTo(pk.Marshal(
+		if event.Result == events.LoginAllowed {
+			err := event.Conn.SendTo(pk.Marshal(
 				0x02,
-				pk.UUID(data.Player.UUID),
-				pk.String(data.Player.Name),
+				pk.UUID(event.Player.UUID),
+				pk.String(event.Player.Name),
 			).Encode())
 			if err != nil {
 				log.Printf("error sending login success, %w", err)
@@ -67,7 +69,6 @@ func (s *Server) Init() {
 			// TODO: send kick message
 		}
 	})
-
 
 	events.PlayerJoinEvent.RegisterNet(func(data *events.PlayerJoinData) {
 		player := data.Player
@@ -93,21 +94,21 @@ func (s *Server) Init() {
 			//}
 			log.Print(c)
 			log.Print(clientbound.PlayerInfo{
-					Action:     0,
-					NumPlayers: 1,
-					Players:     []pk.Encodable{
-						clientbound.PlayerInfoAddPlayer{
-							UUID: 			pk.UUID(player.UUID),
-							Name:           pk.String(player.Name),
-							NumProperties:  pk.VarInt(0),
-							Properties:     nil,
-							Gamemode:       pk.VarInt(0),
-							Ping:           pk.VarInt(0),
-							HasDisplayName: false,
-							DisplayName:    "",
-						},
+				Action:     0,
+				NumPlayers: 1,
+				Players: []pk.Encodable{
+					clientbound.PlayerInfoAddPlayer{
+						UUID:           pk.UUID(player.UUID),
+						Name:           pk.String(player.Name),
+						NumProperties:  pk.VarInt(0),
+						Properties:     nil,
+						Gamemode:       pk.VarInt(0),
+						Ping:           pk.VarInt(0),
+						HasDisplayName: false,
+						DisplayName:    "",
 					},
-				})
+				},
+			})
 		}
 	})
 
@@ -136,6 +137,9 @@ func (s *Server) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
 //On Connection Closed - A connection has been closed
 func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
 	log.Printf("Connection closed")
+	delete(s.playerMap.uuidToConn, s.playerMap.connToUUID[c])
+	delete(s.playerMap.connToUUID, c)
+
 	return gnet.None
 }
 

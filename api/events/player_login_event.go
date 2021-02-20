@@ -1,6 +1,7 @@
 package events
 
 import (
+	"github.com/panjf2000/gnet"
 	"gogs/api/game"
 )
 
@@ -17,13 +18,14 @@ const (
 var PlayerLoginEvent playerLoginEvent
 
 type PlayerLoginData struct {
-	Player *game.Player
-	Result PlayerLoginResult
+	Player      *game.Player
+	Conn        gnet.Conn
+	Result      PlayerLoginResult
 	KickMessage string
 }
 
 type playerLoginEvent struct {
-	handlers []func(*PlayerLoginData)
+	handlers   []func(*PlayerLoginData)
 	netHandler func(*PlayerLoginData)
 }
 
