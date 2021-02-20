@@ -1,14 +1,9 @@
 package game
 
-import "github.com/panjf2000/gnet"
+import "github.com/google/uuid"
 
 type Player struct {
-	uuid      string
-	username  string
-	conn      gnet.Conn
-	emitterID string
+	UUID uuid.UUID
+	Name string
 }
 
-func (p Player) GetUUID() string {
-	return p.uuid
-}

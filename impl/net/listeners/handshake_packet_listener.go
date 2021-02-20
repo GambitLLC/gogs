@@ -3,6 +3,7 @@ package listeners
 import (
 	"errors"
 	"github.com/panjf2000/gnet"
+	"gogs/impl"
 	pk "gogs/net/packet"
 	"log"
 )
@@ -14,14 +15,11 @@ const (
 	login = 2
 )
 
-type handshakePacketListener struct {
+type HandshakePacketListener struct {
+	S *impl.Server
 }
 
-func HandshakePacketListener() handshakePacketListener {
-	return handshakePacketListener{}
-}
-
-func (listener handshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) error {
+func (listener HandshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) error {
 	if p.ID != 0 {
 		return errors.New("handshake expects Packet ID 0")
 	}
@@ -40,9 +38,9 @@ func (listener handshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) 
 
 	switch ConnectionState(nextState) {
 	case status:
-		c.SetContext(StatusPacketListener(int32(protocolVersion)))
+		c.SetContext(StatusPacketListener{listener.S, int32(protocolVersion)})
 	case login:
-		c.SetContext(LoginPacketListener(int32(protocolVersion), false))
+		c.SetContext(LoginPacketListener{S: listener.S, protocolVersion: int32(protocolVersion)})
 	default:
 		log.Printf("Unhandled state %v", nextState)
 		return errors.New("unhandled state")

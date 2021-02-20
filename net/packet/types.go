@@ -237,7 +237,7 @@ func (v VarInt) Encode() (vs []byte) {
 	n := int32(v)
 	for {
 		b := n & 0b01111111
-		n >>= 7 // TODO: this should be a signed bit shift
+		n >>= 7
 		if n != 0 {
 			b |= 0b10000000
 		}
