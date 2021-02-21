@@ -2,12 +2,10 @@ package logger
 
 import "log"
 
+// TODO: consider using https://github.com/Sirupsen/logrus
+
 func Printf(format string, v ...interface{}) {
-	if len(v) == 0 {
-		log.Printf("[INFO]: " + format)
-	} else {
-		log.Printf("[INFO]: "+format, v)
-	}
+	log.Printf("[INFO]: "+format, v...)
 }
 
 func Error(v ...interface{}) {
@@ -15,5 +13,5 @@ func Error(v ...interface{}) {
 }
 
 func Errorf(format string, v ...interface{}) {
-	log.Fatalf("[ERROR]: "+format, v)
+	log.Fatalf("[ERROR]: "+format, v...)
 }
