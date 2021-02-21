@@ -10,6 +10,7 @@ import (
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
+	"gogs/impl/net/packet/packetids"
 	"log"
 )
 
@@ -53,9 +54,8 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 	logger.Printf("received login from player %v", name)
 
 	if len(name) > 16 {
-		// TODO: define packetid consts and use them
 		// send disconnect
-		return pk.Marshal(0x00, pk.Chat("username too long")).Encode(), errors.New("username too long")
+		return pk.Marshal(packetids.LoginDisconnect, pk.Chat("username too long")).Encode(), errors.New("username too long")
 	}
 
 	// TODO: send encryption request

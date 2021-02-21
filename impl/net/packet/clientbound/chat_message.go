@@ -1,6 +1,9 @@
 package clientbound
 
-import pk "gogs/impl/net/packet"
+import (
+	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/packetids"
+)
 
 type ChatMessage struct {
 	JSONData pk.Chat
@@ -9,5 +12,5 @@ type ChatMessage struct {
 }
 
 func (p ChatMessage) CreatePacket() pk.Packet {
-	return pk.Marshal(0x0E, p.JSONData, p.Position, p.Sender)
+	return pk.Marshal(packetids.ChatMessageClientbound, p.JSONData, p.Position, p.Sender)
 }

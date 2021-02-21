@@ -1,6 +1,9 @@
 package clientbound
 
-import pk "gogs/impl/net/packet"
+import (
+	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/packetids"
+)
 
 type UpdateViewPosition struct {
 	ChunkX pk.VarInt
@@ -8,6 +11,5 @@ type UpdateViewPosition struct {
 }
 
 func (s UpdateViewPosition) CreatePacket() pk.Packet {
-	// TODO: create packetid consts
-	return pk.Marshal(0x40, s.ChunkX, s.ChunkZ)
+	return pk.Marshal(packetids.UpdateViewPosition, s.ChunkX, s.ChunkZ)
 }

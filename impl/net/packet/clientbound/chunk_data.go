@@ -3,6 +3,7 @@ package clientbound
 import (
 	"bytes"
 	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/packetids"
 )
 
 type ChunkData struct {
@@ -20,13 +21,12 @@ type ChunkData struct {
 }
 
 func (s ChunkData) CreatePacket() pk.Packet {
-	// TODO: create packetid consts
 	if s.FullChunk {
-		return pk.Marshal(0x20, s.ChunkX, s.ChunkZ, s.FullChunk, s.PrimaryBitMask,
+		return pk.Marshal(packetids.ChunkData, s.ChunkX, s.ChunkZ, s.FullChunk, s.PrimaryBitMask,
 			s.Heightmaps, s.BiomesLength, s.Biomes, s.Size, s.Data, s.NumBlockEntities,
 			s.BlockEntities)
 	} else {
-		return pk.Marshal(0x20, s.ChunkX, s.ChunkZ, s.FullChunk, s.PrimaryBitMask,
+		return pk.Marshal(packetids.ChunkData, s.ChunkX, s.ChunkZ, s.FullChunk, s.PrimaryBitMask,
 			s.Heightmaps, s.Size, s.Data, s.NumBlockEntities, s.BlockEntities)
 	}
 }

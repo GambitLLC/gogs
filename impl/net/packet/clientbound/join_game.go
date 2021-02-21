@@ -2,6 +2,7 @@ package clientbound
 
 import (
 	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/packetids"
 )
 
 type JoinGame struct {
@@ -24,8 +25,7 @@ type JoinGame struct {
 }
 
 func (s JoinGame) CreatePacket() pk.Packet {
-	// TODO: create packetid consts
-	return pk.Marshal(0x24, s.EntityID, s.IsHardcore, s.Gamemode,
+	return pk.Marshal(packetids.JoinGame, s.EntityID, s.IsHardcore, s.Gamemode,
 		s.PrevGamemode, s.WorldCount, s.WorldNames, s.DimensionCodec,
 		s.Dimension, s.WorldName, s.HashedSeed, s.MaxPlayers, s.ViewDistance,
 		s.RDI, s.ERS, s.IsDebug, s.IsFlat)

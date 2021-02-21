@@ -1,6 +1,9 @@
 package clientbound
 
-import pk "gogs/impl/net/packet"
+import (
+	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/packetids"
+)
 
 type DeclareRecipes struct {
 	NumRecipes pk.VarInt
@@ -8,8 +11,7 @@ type DeclareRecipes struct {
 }
 
 func (s DeclareRecipes) CreatePacket() pk.Packet {
-	// TODO: create packetid consts
-	return pk.Marshal(0x5A, s.NumRecipes, s.Recipes)
+	return pk.Marshal(packetids.DeclareRecipes, s.NumRecipes, s.Recipes)
 }
 
 type recipes []recipe

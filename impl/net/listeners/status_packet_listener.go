@@ -20,7 +20,7 @@ func (listener StatusPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]
 	switch p.ID {
 	//QueryResponsePacket
 	case 0x00:
-		outPacket := clientbound.QueryStatusResponse{
+		outPacket := clientbound.StatusResponse{
 			JSONResponse: `{"description":{"text":"gogs - a blazingly fast minecraft server"},"players":{"max":20,"online":0},"version":{"name":"gogs 1.16.5","protocol":754}}`,
 		}.CreatePacket().Encode()
 
@@ -33,7 +33,7 @@ func (listener StatusPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]
 			return nil, err
 		}
 
-		return clientbound.QueryStatusPong{
+		return clientbound.StatusPong{
 			Payload: ping.Payload,
 		}.CreatePacket().Encode(), nil
 

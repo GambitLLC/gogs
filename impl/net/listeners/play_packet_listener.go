@@ -17,7 +17,7 @@ type PlayPacketListener struct {
 
 func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]byte, error) {
 	switch p.ID {
-	case packetids.ChatMessage:
+	case packetids.ChatMessageServerbound:
 		s := serverbound.ChatMessage{}
 		if err := s.FromPacket(p); err != nil {
 			return nil, err
@@ -34,8 +34,8 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]by
 			return nil, err
 		}
 
-	case packetids.PlayerPositionAndLook:
-		s := serverbound.PlayerPositionAndLook{}
+	case packetids.PlayerPositionAndRotationServerbound:
+		s := serverbound.PlayerPositionAndRotation{}
 		if err := s.FromPacket(p); err != nil {
 			return nil, err
 		}

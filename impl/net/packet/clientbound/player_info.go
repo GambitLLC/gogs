@@ -3,6 +3,7 @@ package clientbound
 import (
 	"bytes"
 	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/packetids"
 )
 
 type PlayerInfo struct {
@@ -12,8 +13,7 @@ type PlayerInfo struct {
 }
 
 func (s PlayerInfo) CreatePacket() pk.Packet {
-	// TODO: create packetid consts
-	return pk.Marshal(0x32, s.Action, s.NumPlayers, s.Players)
+	return pk.Marshal(packetids.PlayerInfo, s.Action, s.NumPlayers, s.Players)
 }
 
 type players []pk.Encodable

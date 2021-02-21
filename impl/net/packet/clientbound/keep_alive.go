@@ -1,11 +1,14 @@
 package clientbound
 
-import pk "gogs/impl/net/packet"
+import (
+	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/packetids"
+)
 
 type KeepAlive struct {
 	ID pk.Long
 }
 
 func (p KeepAlive) CreatePacket() pk.Packet {
-	return pk.Marshal(0x1F, p.ID)
+	return pk.Marshal(packetids.KeepAliveClientbound, p.ID)
 }

@@ -2,7 +2,7 @@ package serverbound
 
 import pk "gogs/impl/net/packet"
 
-type PlayerPositionAndLook struct {
+type PlayerPositionAndRotation struct {
 	X          pk.Double
 	Y          pk.Double
 	Z          pk.Double
@@ -11,6 +11,6 @@ type PlayerPositionAndLook struct {
 	TeleportID pk.VarInt
 }
 
-func (s *PlayerPositionAndLook) FromPacket(packet *pk.Packet) error {
+func (s *PlayerPositionAndRotation) FromPacket(packet *pk.Packet) error {
 	return packet.Unmarshal(&s.X, &s.Y, &s.Z, &s.Yaw, &s.Pitch, &s.TeleportID)
 }

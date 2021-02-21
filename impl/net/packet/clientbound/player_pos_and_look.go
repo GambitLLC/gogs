@@ -3,6 +3,7 @@ package clientbound
 import (
 	"gogs/api/game"
 	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/packetids"
 )
 
 type PlayerPositionAndLook struct {
@@ -16,8 +17,7 @@ type PlayerPositionAndLook struct {
 }
 
 func (s PlayerPositionAndLook) CreatePacket() pk.Packet {
-	// TODO: create packetid consts
-	return pk.Marshal(0x34, s.X, s.Y, s.Z, s.Yaw, s.Pitch, s.Flags, s.TeleportID)
+	return pk.Marshal(packetids.PlayerPositionAndLookClientbound, s.X, s.Y, s.Z, s.Yaw, s.Pitch, s.Flags, s.TeleportID)
 }
 
 func (s *PlayerPositionAndLook) FromPlayer(p game.Player) *PlayerPositionAndLook {
