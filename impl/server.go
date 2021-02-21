@@ -5,9 +5,7 @@ import (
 	"github.com/google/uuid"
 	"gogs/api"
 	"gogs/api/data/chat"
-	"gogs/api/events"
 	"gogs/impl/logger"
-	"gogs/impl/net/handlers"
 	"gogs/impl/net/packet/clientbound"
 	"strconv"
 	"time"
@@ -28,10 +26,11 @@ type Server struct {
 	api.Server
 	gnet.EventServer
 
-	Host      string
-	Port      uint16
-	tickCount uint64
-	playerMap *playerMapping
+	Host        string
+	Port        uint16
+	tickCount   uint64
+	numEntities int32 // TODO: find a better way to implement entity ids?
+	playerMap   *playerMapping
 }
 
 func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Player {
@@ -42,8 +41,9 @@ func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Pl
 		return player
 	}
 	player = &game.Player{
-		UUID: u,
-		Name: name,
+		EntityID: s.numEntities,
+		UUID:     u,
+		Name:     name,
 		Position: game.Position{
 			X: 0,
 			Y: 2,
@@ -59,6 +59,7 @@ func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Pl
 			Z: 0,
 		},
 	}
+	s.numEntities += 1
 	s.playerMap.uuidToPlayer[u] = player
 	s.playerMap.uuidToConn[u] = conn
 	s.playerMap.connToPlayer[conn] = player
@@ -108,11 +109,6 @@ func (s *Server) Init() {
 	// TODO: set up Server initialization (world, etc)
 
 	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
-
-	// TODO: Move all net listeners into another file
-	events.PlayerLoginEvent.RegisterNet(handlers.PlayerLoginHandler(s))
-	events.PlayerJoinEvent.RegisterNet(handlers.PlayerJoinHandler(s))
-	events.PlayerChatEvent.RegisterNet(handlers.PlayerChatHandler(s))
 }
 
 //On Server Start - Ready to accept connections

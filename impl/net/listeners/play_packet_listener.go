@@ -2,12 +2,10 @@ package listeners
 
 import (
 	"errors"
-	"fmt"
 	"github.com/panjf2000/gnet"
 	"gogs/api"
-	"gogs/api/data/chat"
-	"gogs/api/events"
 	"gogs/impl/logger"
+	"gogs/impl/net/handlers"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/packetids"
 	"gogs/impl/net/packet/serverbound"
@@ -24,19 +22,9 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]by
 		// TODO: Handle this
 		logger.Printf("Received teleport confirm")
 	case packetids.ChatMessageServerbound:
-		s := serverbound.ChatMessage{}
-		if err := s.FromPacket(p); err != nil {
+		if err := handlers.ChatMessage(c, p, listener.S); err != nil {
 			return nil, err
 		}
-		player := listener.S.PlayerFromConn(c)
-		logger.Printf("Received chat message `%v` from %v", s.Message, player.Name)
-		msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name, s.Message))
-		events.PlayerChatEvent.Trigger(&events.PlayerChatData{
-			Player:     player,
-			Recipients: listener.S.Players(),
-			Message:    msg,
-		})
-
 	case packetids.ClientSettings:
 		logger.Printf("Received client settings")
 		// TODO: actually handle client settings
@@ -49,10 +37,6 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]by
 		logger.Printf("Received player position")
 	case packetids.PlayerPositionAndRotationServerbound:
 		logger.Printf("Received player pos and rotation")
-		s := serverbound.PlayerPositionAndRotation{}
-		if err := s.FromPacket(p); err != nil {
-			return nil, err
-		}
 	case packetids.PlayerRotation:
 		logger.Printf("Received player rotation")
 	case packetids.KeepAliveServerbound:

@@ -5,6 +5,7 @@ import (
 )
 
 type Player struct {
+	EntityID      int32
 	UUID          uuid.UUID
 	Name          string
 	Position      Position

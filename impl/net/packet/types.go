@@ -315,6 +315,10 @@ func (p *Position) Decode(r PacketReader) error {
 	return nil
 }
 
+func (a Angle) Encode() []byte {
+	return []byte{byte(a)}
+}
+
 func (u UUID) Encode() []byte {
 	return u[:]
 }
