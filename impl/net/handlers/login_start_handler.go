@@ -165,7 +165,33 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 
 		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
 
+		// send time update with negative time to keep sun in position
+		buf.Write(clientbound.TimeUpdate{WorldAge: 0, TimeOfDay: -6000}.CreatePacket().Encode())
+
+		// send list of players who are online
+		c := s.ConnFromUUID(player.UUID)
+		players := s.Players()
+		playerInfoArr := make([]pk.Encodable, 0, len(players))
+		for _, p := range players {
+			playerInfoArr = append(playerInfoArr, clientbound.PlayerInfoAddPlayer{
+				UUID:           pk.UUID(p.UUID),
+				Name:           pk.String(p.Name),
+				NumProperties:  0,
+				Properties:     nil,
+				Gamemode:       1,
+				Ping:           1,
+				HasDisplayName: false,
+				DisplayName:    "",
+			})
+		}
+		buf.Write(clientbound.PlayerInfo{
+			Action:     0,
+			NumPlayers: pk.VarInt(len(players)),
+			Players:    playerInfoArr,
+		}.CreatePacket().Encode())
+
 		if err := c.AsyncWrite(buf.Bytes()); err != nil {
+			_ = c.Close()
 			return err
 		}
 
@@ -174,6 +200,28 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 			Message: fmt.Sprintf("%v has joined the game", player.Name),
 		}
 		events.PlayerJoinEvent.Trigger(&event)
+
+		// send out player info to players online
+		packet := clientbound.PlayerInfo{
+			Action:     0,
+			NumPlayers: 1,
+			Players: []pk.Encodable{
+				clientbound.PlayerInfoAddPlayer{
+					UUID:           pk.UUID(player.UUID),
+					Name:           pk.String(player.Name),
+					NumProperties:  0,
+					Properties:     nil,
+					Gamemode:       0,
+					Ping:           0,
+					HasDisplayName: false,
+					DisplayName:    "",
+				},
+			},
+		}.CreatePacket().Encode()
+		for _, p := range s.Players() {
+			c := s.ConnFromUUID(p.UUID)
+			_ = c.AsyncWrite(packet)
+		}
 
 		s.Broadcast(event.Message)
 
