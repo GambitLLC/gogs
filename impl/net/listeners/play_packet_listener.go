@@ -34,11 +34,13 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]by
 		}
 	case packetids.PlayerPosition:
 		// TODO: Handle all player pos & rotation packets
-		logger.Printf("Received player position")
+		return nil, handlers.PlayerPosition(c, p, listener.S)
 	case packetids.PlayerPositionAndRotationServerbound:
 		logger.Printf("Received player pos and rotation")
 	case packetids.PlayerRotation:
 		logger.Printf("Received player rotation")
+	case packetids.Animation:
+		return nil, handlers.Animation(c, p, listener.S)
 	case packetids.KeepAliveServerbound:
 		logger.Printf("Received keep alive")
 		//TODO: kick client for incorrect / untimely Keep-Alive response

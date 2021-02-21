@@ -30,7 +30,7 @@ const (
 	SpawnLivingEntity                = 0x02
 	SpawnPainting                    = 0x03
 	SpawnPlayer                      = 0x04
-	EntityAnimationClientbound       = 0x05
+	EntityAnimation                  = 0x05
 	Statistics                       = 0x06
 	AcknowledgePlayerDigging         = 0x07
 	BlockBreakAnimation              = 0x08
@@ -163,7 +163,7 @@ const (
 	UpdateJigsawBlock                    = 0x29
 	UpdateStructureBlock                 = 0x2A
 	UpdateSign                           = 0x2B
-	AnimationServerbound                 = 0x2C
+	Animation                            = 0x2C
 	Spectate                             = 0x2D
 	PlayerBlockPlacement                 = 0x2E
 	UseItem                              = 0x2F

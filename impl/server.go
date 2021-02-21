@@ -47,7 +47,7 @@ func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Pl
 		Name:     name,
 		Position: game.Position{
 			X: 0,
-			Y: 2,
+			Y: 1,
 			Z: 0,
 		},
 		Rotation: game.Rotation{
@@ -56,7 +56,7 @@ func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Pl
 		},
 		SpawnPosition: game.Position{
 			X: 0,
-			Y: 2,
+			Y: 1,
 			Z: 0,
 		},
 	}

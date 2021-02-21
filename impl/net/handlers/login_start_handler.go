@@ -202,7 +202,7 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 		events.PlayerJoinEvent.Trigger(&event)
 
 		// send out player info to players online
-		packet := clientbound.PlayerInfo{
+		playerInfoPacket := clientbound.PlayerInfo{
 			Action:     0,
 			NumPlayers: 1,
 			Players: []pk.Encodable{
@@ -218,9 +218,22 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 				},
 			},
 		}.CreatePacket().Encode()
+		// TODO: spawn player should be occurring when players enter range (not join game), do logic elsewhere (tick?)
+		spawnPlayerPacket := clientbound.SpawnPlayer{
+			EntityID:   pk.VarInt(player.EntityID),
+			PlayerUUID: pk.UUID(player.UUID),
+			X:          pk.Double(player.Position.X),
+			Y:          pk.Double(player.Position.Y),
+			Z:          pk.Double(player.Position.Z),
+			Yaw:        pk.Angle(player.Rotation.Yaw / 360 * 256),
+			Pitch:      pk.Angle(player.Rotation.Pitch / 360 * 256),
+		}.CreatePacket().Encode()
+
 		for _, p := range s.Players() {
-			c := s.ConnFromUUID(p.UUID)
-			_ = c.AsyncWrite(packet)
+			conn := s.ConnFromUUID(p.UUID)
+			if conn != c { // Don't spawn self ...
+				_ = conn.AsyncWrite(append(playerInfoPacket, spawnPlayerPacket...))
+			}
 		}
 
 		s.Broadcast(event.Message)
