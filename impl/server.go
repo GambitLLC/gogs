@@ -102,6 +102,28 @@ func (s *Server) Init() {
 
 	events.PlayerJoinEvent.RegisterNet(func(data *events.PlayerJoinData) {
 		player := data.Player
+		c := s.playerMap.uuidToConn[player.UUID]
+		// send the players that are already online
+		players := make([]pk.Encodable, 0, len(s.playerMap.uuidToPlayer))
+		for _, p := range s.playerMap.uuidToPlayer {
+			players = append(players, clientbound.PlayerInfoAddPlayer{
+				UUID:           pk.UUID(p.UUID),
+				Name:           pk.String(p.Name),
+				NumProperties:  pk.VarInt(0),
+				Properties:     nil,
+				Gamemode:       pk.VarInt(0),
+				Ping:           pk.VarInt(0),
+				HasDisplayName: false,
+				DisplayName:    "",
+			})
+		}
+		c.AsyncWrite(clientbound.PlayerInfo{
+			Action:     0,
+			NumPlayers: pk.VarInt(len(players)),
+			Players:    players,
+		}.CreatePacket().Encode())
+
+		// send the player who just joined to everyone else
 		for _, c := range s.playerMap.uuidToConn {
 			err := c.AsyncWrite(clientbound.PlayerInfo{
 				Action:     0,
