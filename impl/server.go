@@ -3,6 +3,7 @@ package impl
 import (
 	"bytes"
 	"github.com/google/uuid"
+	"gogs/api/events"
 	"gogs/impl/logger"
 	"gogs/impl/net/packet/clientbound"
 	"strconv"
@@ -75,47 +76,46 @@ func (s *Server) Init() {
 	// TODO: set up Server initialization (world, etc)
 
 	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
-	//events.PlayerLoginEvent.RegisterNet(func(event *events.PlayerLoginData) {
-	//	// send login success
-	//	if event.Result == events.LoginAllowed {
-	//		err := event.Conn.AsyncWrite(pk.Marshal(
-	//			0x02,
-	//			pk.UUID(event.Player.UUID),
-	//			pk.String(event.Player.Name),
-	//		).Encode())
-	//		if err != nil {
-	//			logger.Printf("error sending login success, %w", err)
-	//		}
-	//	} else {
-	//		// TODO: send kick message
-	//	}
-	//})
+	events.PlayerLoginEvent.RegisterNet(func(event *events.PlayerLoginData) {
+		// send login success
+		if event.Result == events.LoginAllowed {
+			err := event.Conn.AsyncWrite(pk.Marshal(
+				0x02,
+				pk.UUID(event.Player.UUID),
+				pk.String(event.Player.Name),
+			).Encode())
+			if err != nil {
+				logger.Printf("error sending login success, %w", err)
+			}
+		} else {
+			// TODO: send kick message
+		}
+	})
 
-	//events.PlayerJoinEvent.RegisterNet(func(data *events.PlayerJoinData) {
-	//	player := data.Player
-	//	for _, c := range s.playerMap.uuidToConn {
-	//		err := c.AsyncWrite(clientbound.PlayerInfo{
-	//			Action:     0,
-	//			NumPlayers: 1,
-	//			Players: []pk.Encodable{
-	//				clientbound.PlayerInfoAddPlayer{
-	//					UUID:           pk.UUID(player.UUID),
-	//					Name:           pk.String(player.Name),
-	//					NumProperties:  pk.VarInt(0),
-	//					Properties:     nil,
-	//					Gamemode:       pk.VarInt(0),
-	//					Ping:           pk.VarInt(0),
-	//					HasDisplayName: false,
-	//					DisplayName:    "",
-	//				},
-	//			},
-	//		}.CreatePacket().Encode())
-	//		if err != nil {
-	//			logger.Printf("error sending player info, %w", err)
-	//		}
-	//	}
-	//})
-
+	events.PlayerJoinEvent.RegisterNet(func(data *events.PlayerJoinData) {
+		player := data.Player
+		for _, c := range s.playerMap.uuidToConn {
+			err := c.AsyncWrite(clientbound.PlayerInfo{
+				Action:     0,
+				NumPlayers: 1,
+				Players: []pk.Encodable{
+					clientbound.PlayerInfoAddPlayer{
+						UUID:           pk.UUID(player.UUID),
+						Name:           pk.String(player.Name),
+						NumProperties:  pk.VarInt(0),
+						Properties:     nil,
+						Gamemode:       pk.VarInt(0),
+						Ping:           pk.VarInt(0),
+						HasDisplayName: false,
+						DisplayName:    "",
+					},
+				},
+			}.CreatePacket().Encode())
+			if err != nil {
+				logger.Printf("error sending player info, %w", err)
+			}
+		}
+	})
 }
 
 //On Server Start - Ready to accept connections
@@ -163,22 +163,24 @@ func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
 }
 
 //On packet
-func (s *Server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Action) {
-	action = gnet.None
+func (s *Server) React(frame []byte, c gnet.Conn) (o []byte, action gnet.Action) {
 	packet, err := pk.Decode(bytes.NewReader(frame))
 	if err != nil {
 		logger.Printf("error: %w", err)
-		return
+		return nil, gnet.None
 	}
 	logger.Printf("packet came in: %v", *packet)
 
 	plist := c.Context().(plists.PacketListener)
-	if out, err = plist.HandlePacket(c, packet); err != nil {
+	out, err := plist.HandlePacket(c, packet)
+	if err != nil {
 		logger.Printf("failed to handle packet, got error: %w", err)
-		return
+		return nil, gnet.None
 	}
 
-	return
+	c.AsyncWrite(out)
+
+	return nil, gnet.None
 }
 
 //On tick

@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/panjf2000/gnet"
 	"gogs/api"
+	"gogs/api/events"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
@@ -80,22 +81,18 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 
 		// send login success
 		buf := bytes.Buffer{}
-		buf.Write(pk.Marshal(
-			0x02,
-			pk.UUID(player.UUID),
-			pk.String(player.Name),
-		).Encode())
 
-		// trigger login event
-		//events.PlayerLoginEvent.Trigger(&events.PlayerLoginData{
-		//	Player: player,
-		//	Conn:   c,
-		//})
-		//
-		//events.PlayerJoinEvent.Trigger(&events.PlayerJoinData{
-		//	Player:  player,
-		//	Message: "",
-		//})
+		//trigger login event
+		events.PlayerLoginEvent.Trigger(&events.PlayerLoginData{
+			Player: player,
+			Conn:   c,
+		})
+
+		// trigger player join event
+		events.PlayerJoinEvent.Trigger(&events.PlayerJoinData{
+			Player:  player,
+			Message: "",
+		})
 
 		buf.Write(clientbound.JoinGame{
 			PlayerEntity: 12193,
@@ -129,7 +126,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 									Downfall:      0.4,
 									Category:      "plains",
 									Effects: clientbound.BiomeEffects{
-										SkyColor:      0x00FF00,
+										SkyColor:      0xFF851B,
 										WaterFogColor: 329011,
 										FogColor:      12638463,
 										WaterColor:    4159204,
@@ -149,6 +146,76 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 			IsDebug:      false,
 			IsFlat:       false,
 		}.CreatePacket().Encode())
+
+		buf.Write(clientbound.HeldItemChange{}.CreatePacket().Encode())
+
+		buf.Write(clientbound.DeclareRecipes{
+			NumRecipes: 0,
+			Recipes:    nil,
+		}.CreatePacket().Encode())
+
+		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
+
+		buf.Write(clientbound.UpdateViewPosition{
+			ChunkX: 0,
+			ChunkZ: 0,
+		}.CreatePacket().Encode())
+
+		biomes := make([]pk.VarInt, 1024, 1024)
+		for i := range biomes {
+			biomes[i] = 1
+		}
+
+		blockData := make([]pk.Long, 256)
+		for i := 0; i < 16; i++ {
+			blockData[i] = 0x1111111111111111
+		}
+
+		for x := -6; x < 6; x++ {
+			for z := -6; z < 6; z++ {
+				log.Print("creating chunk data")
+				chunk := clientbound.ChunkData{
+					ChunkX:         pk.Int(x),
+					ChunkZ:         pk.Int(z),
+					FullChunk:      true,
+					PrimaryBitMask: 1,
+					Heightmaps: pk.NBT{
+						V: clientbound.Heightmap{
+							MotionBlocking: make([]int64, 37),
+							WorldSurface:   make([]int64, 37),
+						},
+					},
+					BiomesLength: 1024,
+					Biomes:       biomes,
+					Size:         2056,
+					Data: clientbound.ChunkDataArray{
+						clientbound.ChunkSection{
+							BlockCount:   64,
+							BitsPerBlock: 4,
+							Palette: clientbound.ChunkPalette{
+								Length:  2,
+								Palette: []pk.VarInt{0, 1},
+							},
+							DataArrayLength: 256,
+							DataArray:       blockData,
+						},
+					},
+					NumBlockEntities: 0,
+					BlockEntities:    nil,
+				}.CreatePacket().Encode()
+				log.Print(chunk)
+				//log.Print("Sending chunk data")
+				buf.Write(chunk)
+			}
+		}
+
+		buf.Write(clientbound.SpawnPosition{Location: pk.Position{
+			X: 0,
+			Y: 2,
+			Z: 0,
+		}}.CreatePacket().Encode())
+
+		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
 
 		return buf.Bytes(), nil
 	}
