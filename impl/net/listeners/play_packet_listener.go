@@ -2,8 +2,10 @@ package listeners
 
 import (
 	"errors"
+	"fmt"
 	"github.com/panjf2000/gnet"
 	"gogs/api"
+	"gogs/api/data/chat"
 	"gogs/api/events"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/packetids"
@@ -22,10 +24,12 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]by
 		if err := s.FromPacket(p); err != nil {
 			return nil, err
 		}
+		player := listener.S.PlayerFromConn(c)
+		msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name, s.Message))
 		events.PlayerChatEvent.Trigger(&events.PlayerChatData{
-			Player:     listener.S.PlayerFromConn(c),
+			Player:     player,
 			Recipients: listener.S.Players(),
-			Message:    string(s.Message),
+			Message:    msg,
 		})
 
 	case packetids.ClientSettings:

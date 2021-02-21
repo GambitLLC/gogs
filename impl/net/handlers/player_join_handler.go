@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"gogs/api"
 	"gogs/api/events"
 	"gogs/impl/logger"
@@ -11,8 +12,11 @@ import (
 func PlayerJoinHandler(s api.Server) func(*events.PlayerJoinData) {
 	return func(data *events.PlayerJoinData) {
 		player := data.Player
+
+		s.Broadcast(fmt.Sprintf("%v has joined the game", player.Name))
+
+		// send the players that are already online to the person who joined
 		c := s.ConnFromUUID(player.UUID)
-		// send the players that are already online
 		players := s.Players()
 		playerInfoArr := make([]pk.Encodable, 0, len(players))
 		for _, p := range players {

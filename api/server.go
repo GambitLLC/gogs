@@ -12,4 +12,5 @@ type Server interface {
 	PlayerFromConn(gnet.Conn) *game.Player
 	PlayerFromUUID(uuid.UUID) *game.Player
 	ConnFromUUID(uuid.UUID) gnet.Conn
+	Broadcast(string)
 }

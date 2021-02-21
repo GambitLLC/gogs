@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/google/uuid"
 	"gogs/api"
+	"gogs/api/data/chat"
 	"gogs/api/events"
 	"gogs/impl/logger"
 	"gogs/impl/net/handlers"
@@ -83,6 +84,19 @@ func (s Server) PlayerFromUUID(uuid uuid.UUID) *game.Player {
 
 func (s Server) ConnFromUUID(uuid uuid.UUID) gnet.Conn {
 	return s.playerMap.uuidToConn[uuid]
+}
+
+func (s Server) Broadcast(text string) {
+	// TODO: figure out chat colors
+	msg := chat.NewMessage("§e" + text)
+	pkt := clientbound.ChatMessage{
+		JSONData: pk.Chat(msg.AsJSON()),
+		Position: 1, // TODO: define chat positions as enum
+		Sender:   pk.UUID{},
+	}.CreatePacket().Encode()
+	for _, c := range s.playerMap.uuidToConn {
+		c.AsyncWrite(pkt)
+	}
 }
 
 func (s *Server) Init() {

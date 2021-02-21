@@ -1,8 +1,7 @@
 package events
 
 import (
-	"encoding/json"
-	"fmt"
+	"gogs/api/data/chat"
 	"gogs/api/game"
 )
 
@@ -11,28 +10,8 @@ var PlayerChatEvent playerChatEvent
 type PlayerChatData struct {
 	Player     *game.Player
 	Recipients []*game.Player
-	Message    string
+	Message    chat.Message
 	Format     string // First argument will be Player.Name, second will be Message
-}
-
-type chatJSON struct {
-	Message string      `json:"text"`
-	Extra   []*chatJSON `json:"extra,omitempty"`
-}
-
-func (d PlayerChatData) AsJSON() string {
-	if d.Format == "" {
-		d.Format = "%s: %s"
-	}
-	chat := chatJSON{
-		Message: fmt.Sprintf(d.Format, d.Player.Name, d.Message),
-		Extra:   nil,
-	}
-	if text, err := json.Marshal(chat); err != nil {
-		panic(err)
-	} else {
-		return string(text)
-	}
 }
 
 type playerChatEvent struct {
