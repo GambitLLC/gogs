@@ -29,7 +29,7 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]by
 			return nil, err
 		}
 		player := listener.S.PlayerFromConn(c)
-		logger.Printf("Received chat message `%v` from %v", player.Name, s.Message)
+		logger.Printf("Received chat message `%v` from %v", s.Message, player.Name)
 		msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name, s.Message))
 		events.PlayerChatEvent.Trigger(&events.PlayerChatData{
 			Player:     player,
