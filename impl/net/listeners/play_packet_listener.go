@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/panjf2000/gnet"
 	"gogs/api"
+	"gogs/api/events"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/packetids"
 	"gogs/impl/net/packet/serverbound"
@@ -16,13 +17,22 @@ type PlayPacketListener struct {
 
 func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]byte, error) {
 	switch p.ID {
+	case packetids.ChatMessage:
+		s := serverbound.ChatMessage{}
+		if err := s.FromPacket(p); err != nil {
+			return nil, err
+		}
+		events.PlayerChatEvent.Trigger(&events.PlayerChatData{
+			Player:     listener.S.PlayerFromConn(c),
+			Recipients: listener.S.Players(),
+			Message:    string(s.Message),
+		})
+
 	case packetids.ClientSettings:
 		s := serverbound.ClientSettings{}
 		if err := s.FromPacket(p); err != nil {
 			return nil, err
 		}
-
-		return nil, nil
 
 	case packetids.PlayerPositionAndLook:
 		s := serverbound.PlayerPositionAndLook{}

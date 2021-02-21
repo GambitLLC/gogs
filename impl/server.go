@@ -61,6 +61,14 @@ func (s *Server) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game
 	return player
 }
 
+func (s *Server) Players() []*game.Player {
+	players := make([]*game.Player, 0, len(s.playerMap.uuidToPlayer))
+	for _, player := range s.playerMap.uuidToPlayer {
+		players = append(players, player)
+	}
+	return players
+}
+
 func (s *Server) PlayerFromConn(conn gnet.Conn) *game.Player {
 	return s.playerMap.uuidToPlayer[s.playerMap.connToUUID[conn]]
 }
@@ -72,6 +80,8 @@ func (s *Server) Init() {
 		connToUUID:   make(map[gnet.Conn]uuid.UUID),
 	}
 	// TODO: set up Server initialization (world, etc)
+
+	// TODO: Move all net listeners into another file
 
 	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
 	events.PlayerLoginEvent.RegisterNet(func(event *events.PlayerLoginData) {
@@ -112,6 +122,18 @@ func (s *Server) Init() {
 			if err != nil {
 				logger.Printf("error sending player info, %w", err)
 			}
+		}
+	})
+
+	events.PlayerChatEvent.RegisterNet(func(data *events.PlayerChatData) {
+		msg := clientbound.ChatMessage{
+			JSONData: pk.Chat(data.AsJSON()),
+			Position: 0,
+			Sender:   pk.UUID(data.Player.UUID),
+		}.CreatePacket().Encode()
+		for _, p := range data.Recipients {
+			c := s.playerMap.uuidToConn[p.UUID]
+			c.AsyncWrite(msg)
 		}
 	})
 }

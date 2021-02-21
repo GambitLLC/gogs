@@ -1,6 +1,7 @@
 package packetids
 
 const (
-	ClientSettings        int32 = 0x05
+	ChatMessage           int32 = 0x03
+	ClientSettings              = 0x05
 	PlayerPositionAndLook       = 0x13
 )
