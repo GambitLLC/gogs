@@ -5,12 +5,12 @@ import "gogs/api/game"
 var PlayerJoinEvent playerJoinEvent
 
 type PlayerJoinData struct {
-	Player *game.Player
+	Player  *game.Player
 	Message string
 }
 
 type playerJoinEvent struct {
-	handlers []func(*PlayerJoinData)
+	handlers   []func(*PlayerJoinData)
 	netHandler func(*PlayerJoinData)
 }
 

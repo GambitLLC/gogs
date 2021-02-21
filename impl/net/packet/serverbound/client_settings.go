@@ -3,12 +3,12 @@ package serverbound
 import pk "gogs/impl/net/packet"
 
 type ClientSettings struct {
-	Locale pk.String
-	ViewDistance pk.Byte
-	ChatMode pk.VarInt
-	ChatColors pk.Boolean
+	Locale             pk.String
+	ViewDistance       pk.Byte
+	ChatMode           pk.VarInt
+	ChatColors         pk.Boolean
 	DisplayedSkinParts pk.UByte
-	MainHand pk.VarInt
+	MainHand           pk.VarInt
 }
 
 func (s *ClientSettings) FromPacket(packet *pk.Packet) error {

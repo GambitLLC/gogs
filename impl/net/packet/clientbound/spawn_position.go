@@ -3,7 +3,7 @@ package clientbound
 import pk "gogs/impl/net/packet"
 
 type SpawnPosition struct {
-	Location	pk.Position
+	Location pk.Position
 }
 
 func (s SpawnPosition) CreatePacket() pk.Packet {

@@ -3,7 +3,7 @@ package clientbound
 import pk "gogs/impl/net/packet"
 
 type HeldItemChange struct {
-	Slot	pk.Byte
+	Slot pk.Byte
 }
 
 func (s HeldItemChange) CreatePacket() pk.Packet {
