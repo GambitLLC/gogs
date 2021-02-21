@@ -21,7 +21,7 @@ import (
 type playerMapping struct {
 	uuidToPlayer map[uuid.UUID]*game.Player
 	uuidToConn   map[uuid.UUID]gnet.Conn
-	connToUUID   map[gnet.Conn]uuid.UUID
+	connToPlayer map[gnet.Conn]*game.Player
 }
 
 type Server struct {
@@ -34,15 +34,15 @@ type Server struct {
 	playerMap *playerMapping
 }
 
-func (s *Server) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game.Player {
-	player, exists := s.playerMap.uuidToPlayer[uuid]
+func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Player {
+	player, exists := s.playerMap.uuidToPlayer[u]
 	if exists {
 		// TODO: figure out what happens to players who connect twice
-		s.playerMap.uuidToConn[uuid] = conn
+		s.playerMap.uuidToConn[u] = conn
 		return player
 	}
 	player = &game.Player{
-		UUID: uuid,
+		UUID: u,
 		Name: name,
 		Position: game.Position{
 			X: 0,
@@ -59,9 +59,9 @@ func (s *Server) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game
 			Z: 0,
 		},
 	}
-	s.playerMap.uuidToPlayer[uuid] = player
-	s.playerMap.uuidToConn[uuid] = conn
-	s.playerMap.connToUUID[conn] = uuid
+	s.playerMap.uuidToPlayer[u] = player
+	s.playerMap.uuidToConn[u] = conn
+	s.playerMap.connToPlayer[conn] = player
 
 	return player
 }
@@ -75,7 +75,7 @@ func (s Server) Players() []*game.Player {
 }
 
 func (s Server) PlayerFromConn(conn gnet.Conn) *game.Player {
-	return s.playerMap.uuidToPlayer[s.playerMap.connToUUID[conn]]
+	return s.playerMap.connToPlayer[conn]
 }
 
 func (s Server) PlayerFromUUID(uuid uuid.UUID) *game.Player {
@@ -103,7 +103,7 @@ func (s *Server) Init() {
 	s.playerMap = &playerMapping{
 		uuidToPlayer: make(map[uuid.UUID]*game.Player),
 		uuidToConn:   make(map[uuid.UUID]gnet.Conn),
-		connToUUID:   make(map[gnet.Conn]uuid.UUID),
+		connToPlayer: make(map[gnet.Conn]*game.Player),
 	}
 	// TODO: set up Server initialization (world, etc)
 
@@ -140,9 +140,13 @@ func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
 	logger.Printf("Connection closed")
 
 	//clean up all the player state
-	delete(s.playerMap.uuidToConn, s.playerMap.connToUUID[c])
-	delete(s.playerMap.uuidToPlayer, s.playerMap.connToUUID[c])
-	delete(s.playerMap.connToUUID, c)
+	// TODO: this should be done in player quit event (status packet has no player)
+	p, exists := s.playerMap.connToPlayer[c]
+	if exists {
+		delete(s.playerMap.uuidToConn, p.UUID)
+		delete(s.playerMap.uuidToPlayer, p.UUID)
+		delete(s.playerMap.connToPlayer, c)
+	}
 
 	return gnet.None
 }
