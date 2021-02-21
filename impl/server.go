@@ -3,8 +3,10 @@ package impl
 import (
 	"bytes"
 	"github.com/google/uuid"
+	"gogs/api"
 	"gogs/api/events"
 	"gogs/impl/logger"
+	"gogs/impl/net/handlers"
 	"gogs/impl/net/packet/clientbound"
 	"strconv"
 	"time"
@@ -22,9 +24,11 @@ type playerMapping struct {
 }
 
 type Server struct {
-	Host string
-	Port uint16
+	api.Server
 	gnet.EventServer
+
+	Host      string
+	Port      uint16
 	tickCount uint64
 	playerMap *playerMapping
 }
@@ -61,7 +65,7 @@ func (s *Server) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game
 	return player
 }
 
-func (s *Server) Players() []*game.Player {
+func (s Server) Players() []*game.Player {
 	players := make([]*game.Player, 0, len(s.playerMap.uuidToPlayer))
 	for _, player := range s.playerMap.uuidToPlayer {
 		players = append(players, player)
@@ -69,8 +73,16 @@ func (s *Server) Players() []*game.Player {
 	return players
 }
 
-func (s *Server) PlayerFromConn(conn gnet.Conn) *game.Player {
+func (s Server) PlayerFromConn(conn gnet.Conn) *game.Player {
 	return s.playerMap.uuidToPlayer[s.playerMap.connToUUID[conn]]
+}
+
+func (s Server) PlayerFromUUID(uuid uuid.UUID) *game.Player {
+	return s.playerMap.uuidToPlayer[uuid]
+}
+
+func (s Server) ConnFromUUID(uuid uuid.UUID) gnet.Conn {
+	return s.playerMap.uuidToConn[uuid]
 }
 
 func (s *Server) Init() {
@@ -81,83 +93,12 @@ func (s *Server) Init() {
 	}
 	// TODO: set up Server initialization (world, etc)
 
-	// TODO: Move all net listeners into another file
-
 	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
-	events.PlayerLoginEvent.RegisterNet(func(event *events.PlayerLoginData) {
-		// send login success
-		if event.Result == events.LoginAllowed {
-			err := event.Conn.AsyncWrite(pk.Marshal(
-				0x02,
-				pk.UUID(event.Player.UUID),
-				pk.String(event.Player.Name),
-			).Encode())
-			if err != nil {
-				logger.Printf("error sending login success, %w", err)
-			}
-		} else {
-			// TODO: send kick message
-		}
-	})
 
-	events.PlayerJoinEvent.RegisterNet(func(data *events.PlayerJoinData) {
-		player := data.Player
-		c := s.playerMap.uuidToConn[player.UUID]
-		// send the players that are already online
-		players := make([]pk.Encodable, 0, len(s.playerMap.uuidToPlayer))
-		for _, p := range s.playerMap.uuidToPlayer {
-			players = append(players, clientbound.PlayerInfoAddPlayer{
-				UUID:           pk.UUID(p.UUID),
-				Name:           pk.String(p.Name),
-				NumProperties:  pk.VarInt(0),
-				Properties:     nil,
-				Gamemode:       pk.VarInt(0),
-				Ping:           pk.VarInt(0),
-				HasDisplayName: false,
-				DisplayName:    "",
-			})
-		}
-		c.AsyncWrite(clientbound.PlayerInfo{
-			Action:     0,
-			NumPlayers: pk.VarInt(len(players)),
-			Players:    players,
-		}.CreatePacket().Encode())
-
-		// send the player who just joined to everyone else
-		for _, c := range s.playerMap.uuidToConn {
-			err := c.AsyncWrite(clientbound.PlayerInfo{
-				Action:     0,
-				NumPlayers: 1,
-				Players: []pk.Encodable{
-					clientbound.PlayerInfoAddPlayer{
-						UUID:           pk.UUID(player.UUID),
-						Name:           pk.String(player.Name),
-						NumProperties:  pk.VarInt(0),
-						Properties:     nil,
-						Gamemode:       pk.VarInt(0),
-						Ping:           pk.VarInt(0),
-						HasDisplayName: false,
-						DisplayName:    "",
-					},
-				},
-			}.CreatePacket().Encode())
-			if err != nil {
-				logger.Printf("error sending player info, %w", err)
-			}
-		}
-	})
-
-	events.PlayerChatEvent.RegisterNet(func(data *events.PlayerChatData) {
-		msg := clientbound.ChatMessage{
-			JSONData: pk.Chat(data.AsJSON()),
-			Position: 0,
-			Sender:   pk.UUID(data.Player.UUID),
-		}.CreatePacket().Encode()
-		for _, p := range data.Recipients {
-			c := s.playerMap.uuidToConn[p.UUID]
-			c.AsyncWrite(msg)
-		}
-	})
+	// TODO: Move all net listeners into another file
+	events.PlayerLoginEvent.RegisterNet(handlers.PlayerLoginHandler(s))
+	events.PlayerJoinEvent.RegisterNet(handlers.PlayerJoinHandler(s))
+	events.PlayerChatEvent.RegisterNet(handlers.PlayerChatHandler(s))
 }
 
 //On Server Start - Ready to accept connections

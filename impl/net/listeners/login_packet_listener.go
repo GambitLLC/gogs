@@ -79,7 +79,6 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 
 		player := listener.S.CreatePlayer(string(name), uuid.UUID(pk.NameToUUID(string(name))), c)
 
-		// send login success
 		buf := bytes.Buffer{}
 
 		//trigger login event
@@ -88,6 +87,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 			Conn:   c,
 		})
 
+		// TODO: move this triggering into after (if) login event is successful
 		// trigger player join event
 		events.PlayerJoinEvent.Trigger(&events.PlayerJoinData{
 			Player:  player,
