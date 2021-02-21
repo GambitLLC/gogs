@@ -9,6 +9,7 @@ import (
 type Server interface {
 	Players() []*game.Player
 	CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game.Player
+	RemovePlayer(gnet.Conn)
 	PlayerFromConn(gnet.Conn) *game.Player
 	PlayerFromUUID(uuid.UUID) *game.Player
 	ConnFromUUID(uuid.UUID) gnet.Conn

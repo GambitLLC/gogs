@@ -37,15 +37,6 @@ type PlayerInfoAddPlayer struct {
 	DisplayName    pk.Chat // Optional
 }
 
-type Property struct {
-}
-
-type Properties []Property
-
-func (a Properties) Encode() []byte {
-	return nil
-}
-
 func (s PlayerInfoAddPlayer) Encode() []byte {
 	buf := bytes.Buffer{}
 	buf.Write(s.UUID.Encode())
@@ -61,4 +52,21 @@ func (s PlayerInfoAddPlayer) Encode() []byte {
 		buf.Write(s.DisplayName.Encode())
 	}
 	return buf.Bytes()
+}
+
+type PlayerInfoRemovePlayer struct {
+	UUID pk.UUID
+}
+
+func (s PlayerInfoRemovePlayer) Encode() []byte {
+	return s.UUID.Encode()
+}
+
+type Property struct {
+}
+
+type Properties []Property
+
+func (a Properties) Encode() []byte {
+	return nil
 }

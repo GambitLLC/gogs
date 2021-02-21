@@ -6,6 +6,7 @@ import (
 	"gogs/api"
 	"gogs/api/data/chat"
 	"gogs/impl/logger"
+	"gogs/impl/net/handlers"
 	"gogs/impl/net/packet/clientbound"
 	"strconv"
 	"time"
@@ -136,12 +137,12 @@ func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
 	logger.Printf("Connection closed")
 
 	//clean up all the player state
-	// TODO: this should be done in player quit event (status packet has no player)
 	p, exists := s.playerMap.connToPlayer[c]
 	if exists {
 		delete(s.playerMap.uuidToConn, p.UUID)
 		delete(s.playerMap.uuidToPlayer, p.UUID)
 		delete(s.playerMap.connToPlayer, c)
+		_ = handlers.Disconnect(c, *p, s)
 	}
 
 	return gnet.None
