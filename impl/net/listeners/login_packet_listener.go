@@ -95,8 +95,8 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 		})
 
 		buf.Write(clientbound.JoinGame{
-			PlayerEntity: 12193,
-			Hardcore:     false,
+			EntityID:     12193,
+			IsHardcore:   false,
 			Gamemode:     1,
 			PrevGamemode: 0,
 			WorldCount:   1,

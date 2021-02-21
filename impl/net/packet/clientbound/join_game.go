@@ -5,8 +5,8 @@ import (
 )
 
 type JoinGame struct {
-	PlayerEntity   pk.Int
-	Hardcore       pk.Boolean
+	EntityID       pk.Int
+	IsHardcore     pk.Boolean
 	Gamemode       pk.UByte
 	PrevGamemode   pk.Byte
 	WorldCount     pk.VarInt
@@ -25,7 +25,7 @@ type JoinGame struct {
 
 func (s JoinGame) CreatePacket() pk.Packet {
 	// TODO: create packetid consts
-	return pk.Marshal(0x24, s.PlayerEntity, s.Hardcore, s.Gamemode,
+	return pk.Marshal(0x24, s.EntityID, s.IsHardcore, s.Gamemode,
 		s.PrevGamemode, s.WorldCount, s.WorldNames, s.DimensionCodec,
 		s.Dimension, s.WorldName, s.HashedSeed, s.MaxPlayers, s.ViewDistance,
 		s.RDI, s.ERS, s.IsDebug, s.IsFlat)
@@ -47,7 +47,7 @@ type DimensionCodec struct {
 }
 
 type DimensionTypeRegistry struct {
-	Type string                        `nbt:"type"`
+	Type  string                       `nbt:"type"`
 	Value []DimensionTypeRegistryEntry `nbt:"value"`
 }
 
@@ -58,19 +58,19 @@ type DimensionTypeRegistryEntry struct {
 }
 
 type DimensionType struct {
-	PiglinSafe byte `nbt:"piglin_safe"`
-	Natural byte `nbt:"natural"`
-	AmbientLight float32 `nbt:"ambient_light"`
-	Infiniburn string `nbt:"infiniburn"`
-	RespawnAnchorWorks byte `nbt:"respawn_anchor_works"`
-	HasSkylight byte `nbt:"has_skylight"`
-	BedWorks byte `nbt:"bed_works"`
-	Effects string `nbt:"effects"`
-	HasRaids byte `nbt:"has_raids"`
-	LogicalHeight int32 `nbt:"logical_height"`
-	CoordinateScale float32 `nbt:"coordinate_scale"`
-	Ultrawarm byte `nbt:"ultrawarm"`
-	HasCeiling byte `nbt:"has_ceiling"`
+	PiglinSafe         byte    `nbt:"piglin_safe"`
+	Natural            byte    `nbt:"natural"`
+	AmbientLight       float32 `nbt:"ambient_light"`
+	Infiniburn         string  `nbt:"infiniburn"`
+	RespawnAnchorWorks byte    `nbt:"respawn_anchor_works"`
+	HasSkylight        byte    `nbt:"has_skylight"`
+	BedWorks           byte    `nbt:"bed_works"`
+	Effects            string  `nbt:"effects"`
+	HasRaids           byte    `nbt:"has_raids"`
+	LogicalHeight      int32   `nbt:"logical_height"`
+	CoordinateScale    float32 `nbt:"coordinate_scale"`
+	Ultrawarm          byte    `nbt:"ultrawarm"`
+	HasCeiling         byte    `nbt:"has_ceiling"`
 }
 
 var MinecraftOverworld = DimensionType{
@@ -90,7 +90,7 @@ var MinecraftOverworld = DimensionType{
 }
 
 type BiomeRegistry struct {
-	Type string                `nbt:"type"`
+	Type  string               `nbt:"type"`
 	Value []BiomeRegistryEntry `nbt:"value"`
 }
 
@@ -111,8 +111,8 @@ type BiomeProperties struct {
 }
 
 type BiomeEffects struct {
-	SkyColor int32 `nbt:"sky_color"`
+	SkyColor      int32 `nbt:"sky_color"`
 	WaterFogColor int32 `nbt:"water_fog_color"`
-	FogColor int32 `nbt:"fog_color"`
-	WaterColor int32 `nbt:"water_color"`
+	FogColor      int32 `nbt:"fog_color"`
+	WaterColor    int32 `nbt:"water_color"`
 }
