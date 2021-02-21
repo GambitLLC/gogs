@@ -16,7 +16,6 @@ import (
 )
 
 type playerMapping struct {
-	all          []*game.Player
 	uuidToPlayer map[uuid.UUID]*game.Player
 	uuidToConn   map[uuid.UUID]gnet.Conn
 	connToUUID   map[gnet.Conn]uuid.UUID
@@ -55,7 +54,6 @@ func (s *Server) CreatePlayer(name string, uuid uuid.UUID, conn gnet.Conn) *game
 			Z: 0,
 		},
 	}
-	s.playerMap.all = append(s.playerMap.all, player)
 	s.playerMap.uuidToPlayer[uuid] = player
 	s.playerMap.uuidToConn[uuid] = conn
 	s.playerMap.connToUUID[conn] = uuid
@@ -145,18 +143,6 @@ func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
 	//clean up all the player state
 	delete(s.playerMap.uuidToConn, s.playerMap.connToUUID[c])
 	delete(s.playerMap.uuidToPlayer, s.playerMap.connToUUID[c])
-
-	//fast remove elem from slice - https://yourbasic.org/golang/delete-element-slice/
-	for i := 0; i < len(s.playerMap.all); i++ {
-		if s.playerMap.all[i].UUID == s.playerMap.connToUUID[c] {
-			_idx := len(s.playerMap.all) - 1
-			s.playerMap.all[i] = s.playerMap.all[_idx]
-			s.playerMap.all[_idx] = nil
-			s.playerMap.all = s.playerMap.all[:_idx]
-			break
-		}
-	}
-
 	delete(s.playerMap.connToUUID, c)
 
 	return gnet.None
@@ -189,9 +175,9 @@ func (s *Server) Tick() (delay time.Duration, action gnet.Action) {
 	// TODO: probably game logic stuff
 	if s.tickCount%100 == 0 {
 		//send out keep-alive to all players
-		for i := 0; i < len(s.playerMap.all); i++ {
-			s.playerMap.uuidToConn[s.playerMap.all[i].UUID].AsyncWrite(clientbound.KeepAlive{
-				pk.Long(time.Now().UnixNano()),
+		for _, c := range s.playerMap.uuidToConn {
+			c.AsyncWrite(clientbound.KeepAlive{
+				ID: pk.Long(time.Now().UnixNano()),
 			}.CreatePacket().Encode())
 		}
 	}
