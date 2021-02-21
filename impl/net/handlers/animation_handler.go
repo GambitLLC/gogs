@@ -6,13 +6,9 @@ import (
 	"gogs/api"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
-	"gogs/impl/net/packet/packetids"
 )
 
 func Animation(c gnet.Conn, pkt *pk.Packet, s api.Server) error {
-	if pkt.ID != packetids.Animation {
-		return fmt.Errorf("animation handler expects packet id %x, got %x", packetids.Animation, pkt.ID)
-	}
 	var hand pk.VarInt
 	if err := pkt.Unmarshal(&hand); err != nil {
 		return err
@@ -38,7 +34,7 @@ func Animation(c gnet.Conn, pkt *pk.Packet, s api.Server) error {
 	for _, p := range s.Players() {
 		conn := s.ConnFromUUID(p.UUID)
 		if conn != c {
-			conn.AsyncWrite(entityAnimationPacket)
+			_ = conn.AsyncWrite(entityAnimationPacket)
 		}
 	}
 
