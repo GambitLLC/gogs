@@ -11,7 +11,6 @@ import (
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/packetids"
-	"log"
 )
 
 type LoginState int8
@@ -33,11 +32,11 @@ func (listener LoginPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]b
 	case start:
 		return listener.handleLoginStart(c, p)
 	case encrypt:
-		return nil, errors.New("not yet implemented")
+		return nil, errors.New("login encryption is not yet implemented")
 	default:
-		log.Panicf("Unhandled state in LoginPacketListener: %v", listener.state)
+		logger.Printf("LoginPacketListener is in an unknown state: %d", listener.state)
+		return nil, c.Close()
 	}
-	return nil, nil
 }
 
 func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet) ([]byte, error) {
@@ -51,7 +50,7 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 		return nil, err
 	}
 
-	logger.Printf("received login from player %v", name)
+	logger.Printf("Received login start packet from player %v", name)
 
 	if len(name) > 16 {
 		// send disconnect
@@ -173,7 +172,6 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 
 		for x := -6; x < 6; x++ {
 			for z := -6; z < 6; z++ {
-				log.Print("creating chunk data")
 				chunk := clientbound.ChunkData{
 					ChunkX:         pk.Int(x),
 					ChunkZ:         pk.Int(z),
@@ -203,8 +201,6 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 					NumBlockEntities: 0,
 					BlockEntities:    nil,
 				}.CreatePacket().Encode()
-				log.Print(chunk)
-				//log.Print("Sending chunk data")
 				buf.Write(chunk)
 			}
 		}
@@ -219,6 +215,4 @@ func (listener *LoginPacketListener) handleLoginStart(c gnet.Conn, p *pk.Packet)
 
 		return buf.Bytes(), nil
 	}
-
-	return nil, nil
 }

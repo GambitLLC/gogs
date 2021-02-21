@@ -2,7 +2,6 @@ package chat
 
 import (
 	"encoding/json"
-	"log"
 )
 
 type Message struct {
@@ -27,7 +26,6 @@ func (m Message) AsJSON() string {
 	if text, err := json.Marshal(m); err != nil {
 		panic(err)
 	} else {
-		log.Print(text)
 		return string(text)
 	}
 }

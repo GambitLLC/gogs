@@ -36,6 +36,8 @@ func (listener HandshakePacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) 
 		return nil, err
 	}
 
+	logger.Printf("Received handshake: protocol %d and next state %d", protocolVersion, nextState)
+
 	switch ConnectionState(nextState) {
 	case status:
 		c.SetContext(StatusPacketListener{

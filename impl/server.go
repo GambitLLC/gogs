@@ -151,15 +151,14 @@ func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
 func (s *Server) React(frame []byte, c gnet.Conn) (o []byte, action gnet.Action) {
 	packet, err := pk.Decode(bytes.NewReader(frame))
 	if err != nil {
-		logger.Printf("error: %w", err)
+		logger.Printf("error decoding frame into packet: %v", err)
 		return nil, gnet.None
 	}
-	logger.Printf("packet came in: %v", *packet)
 
 	plist := c.Context().(plists.PacketListener)
 	out, err := plist.HandlePacket(c, packet)
 	if err != nil {
-		logger.Printf("failed to handle packet, got error: %w", err)
+		logger.Printf("failed to handle packet %v\n got error: %v", packet, err.Error())
 		return nil, gnet.None
 	}
 
