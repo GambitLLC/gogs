@@ -23,11 +23,11 @@ type Encodable interface {
 }
 
 type Decodable interface {
-	Decode(r PacketReader) error
+	Decode(r Reader) error
 }
 
-// PacketReader is used for decoding Fields
-type PacketReader interface {
+// Reader is used for decoding Fields
+type Reader interface {
 	io.ByteReader
 	io.Reader
 }
@@ -58,7 +58,7 @@ type (
 	ByteArray []byte
 )
 
-func ReadBytes(r PacketReader, n int) (bs []byte, err error) {
+func ReadBytes(r Reader, n int) (bs []byte, err error) {
 	bs = make([]byte, n)
 	for i := 0; i < n; i++ {
 		bs[i], err = r.ReadByte()
@@ -76,13 +76,13 @@ func (b Boolean) Encode() []byte {
 	return []byte{0x00}
 }
 
-func (b *Boolean) Decode(r PacketReader) error {
+func (b *Boolean) Decode(r Reader) error {
 	v, err := r.ReadByte()
 	if err != nil {
 		return err
 	}
 
-	*b = Boolean(v != 0)
+	*b = v != 0
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (b Byte) Encode() []byte {
 	return []byte{byte(b)}
 }
 
-func (b *Byte) Decode(r PacketReader) error {
+func (b *Byte) Decode(r Reader) error {
 	v, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (ub UByte) Encode() []byte {
 	return []byte{byte(ub)}
 }
 
-func (ub *UByte) Decode(r PacketReader) error {
+func (ub *UByte) Decode(r Reader) error {
 	v, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func (s Short) Encode() (bs []byte) {
 	return
 }
 
-func (s *Short) Decode(r PacketReader) error {
+func (s *Short) Decode(r Reader) error {
 	bs, err := ReadBytes(r, 2)
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func (us UShort) Encode() (bs []byte) {
 	return
 }
 
-func (us *UShort) Decode(r PacketReader) error {
+func (us *UShort) Decode(r Reader) error {
 	bs, err := ReadBytes(r, 2)
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (n Int) Encode() (bs []byte) {
 	return
 }
 
-func (n *Int) Decode(r PacketReader) error {
+func (n *Int) Decode(r Reader) error {
 	bs, err := ReadBytes(r, 4)
 	if err != nil {
 		return err
@@ -170,7 +170,7 @@ func (n Long) Encode() (bs []byte) {
 	return
 }
 
-func (n *Long) Decode(r PacketReader) error {
+func (n *Long) Decode(r Reader) error {
 	bs, err := ReadBytes(r, 8)
 	if err != nil {
 		return err
@@ -187,7 +187,7 @@ func (f Float) Encode() (bs []byte) {
 	return
 }
 
-func (f *Float) Decode(r PacketReader) error {
+func (f *Float) Decode(r Reader) error {
 	bs, err := ReadBytes(r, 4)
 	if err != nil {
 		return err
@@ -204,7 +204,7 @@ func (d Double) Encode() (bs []byte) {
 	return
 }
 
-func (d *Double) Decode(r PacketReader) error {
+func (d *Double) Decode(r Reader) error {
 	bs, err := ReadBytes(r, 8)
 	if err != nil {
 		return err
@@ -218,7 +218,7 @@ func (s String) Encode() []byte {
 	return append(VarInt(len(s)).Encode(), []byte(s)...)
 }
 
-func (s *String) Decode(r PacketReader) error {
+func (s *String) Decode(r Reader) error {
 	var length VarInt
 	if err := length.Decode(r); err != nil {
 		return err
@@ -252,7 +252,7 @@ func (v VarInt) Encode() (vs []byte) {
 	return
 }
 
-func (v *VarInt) Decode(r PacketReader) error {
+func (v *VarInt) Decode(r Reader) error {
 	var res int32
 
 	for i := 0; ; i++ {
@@ -290,7 +290,7 @@ func (n NBT) Encode() []byte {
 	return bs.Bytes()
 }
 
-func (n *NBT) Decode(r PacketReader) error {
+func (n *NBT) Decode(r Reader) error {
 	return nbt.NewDecoder(r).Decode(n.V)
 }
 
@@ -302,7 +302,7 @@ func (p Position) Encode() (bs []byte) {
 	return
 }
 
-func (p *Position) Decode(r PacketReader) error {
+func (p *Position) Decode(r Reader) error {
 	bs, err := ReadBytes(r, 8)
 	if err != nil {
 		return err
@@ -323,7 +323,7 @@ func (u UUID) Encode() []byte {
 	return u[:]
 }
 
-func (u *UUID) Decode(r PacketReader) error {
+func (u *UUID) Decode(r Reader) error {
 	_, err := r.Read((*u)[:])
 	return err
 }
@@ -347,7 +347,7 @@ func (b ByteArray) Encode() []byte {
 	return append(VarInt(len(b)).Encode(), b...)
 }
 
-func (b *ByteArray) Decode(r PacketReader) error {
+func (b *ByteArray) Decode(r Reader) error {
 	var length VarInt
 	if err := length.Decode(r); err != nil {
 		return err

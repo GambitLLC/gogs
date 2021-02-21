@@ -97,7 +97,7 @@ func (s Server) Broadcast(text string) {
 		Sender:   pk.UUID{},
 	}.CreatePacket().Encode()
 	for _, c := range s.playerMap.uuidToConn {
-		c.AsyncWrite(pkt)
+		_ = c.AsyncWrite(pkt)
 	}
 }
 
@@ -113,7 +113,7 @@ func (s *Server) Init() {
 }
 
 //On Server Start - Ready to accept connections
-func (s *Server) OnInitComplete(svr gnet.Server) gnet.Action {
+func (s *Server) OnInitComplete(_ gnet.Server) gnet.Action {
 	logger.Printf("gogs - a blazingly fast minecraft server")
 	s.Init()
 	logger.Printf("Server listening for connections on tcp://" + s.Host + ":" + strconv.Itoa(int(s.Port)))
@@ -121,7 +121,7 @@ func (s *Server) OnInitComplete(svr gnet.Server) gnet.Action {
 }
 
 //On Server End - Event loop and all connections closed
-func (s *Server) OnShutdown(svr gnet.Server) {
+func (s *Server) OnShutdown(_ gnet.Server) {
 	logger.Printf("Server shutting down")
 }
 
@@ -133,7 +133,7 @@ func (s *Server) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
 }
 
 //On Connection Closed - A connection has been closed
-func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
+func (s *Server) OnClosed(c gnet.Conn, _ error) gnet.Action {
 	logger.Printf("Connection closed")
 
 	//clean up all the player state
@@ -142,7 +142,7 @@ func (s *Server) OnClosed(c gnet.Conn, err error) gnet.Action {
 		delete(s.playerMap.uuidToConn, p.UUID)
 		delete(s.playerMap.uuidToPlayer, p.UUID)
 		delete(s.playerMap.connToPlayer, c)
-		_ = handlers.Disconnect(c, *p, s)
+		_ = handlers.Disconnect(*p, s)
 	}
 
 	return gnet.None
@@ -163,7 +163,7 @@ func (s *Server) React(frame []byte, c gnet.Conn) (o []byte, action gnet.Action)
 		return nil, gnet.None
 	}
 
-	c.AsyncWrite(out)
+	_ = c.AsyncWrite(out)
 
 	return nil, gnet.None
 }
@@ -175,7 +175,7 @@ func (s *Server) Tick() (delay time.Duration, action gnet.Action) {
 	if s.tickCount%100 == 0 {
 		//send out keep-alive to all players
 		for _, c := range s.playerMap.uuidToConn {
-			c.AsyncWrite(clientbound.KeepAlive{
+			_ = c.AsyncWrite(clientbound.KeepAlive{
 				ID: pk.Long(time.Now().UnixNano()),
 			}.CreatePacket().Encode())
 		}

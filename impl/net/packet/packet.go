@@ -43,7 +43,7 @@ func (p Packet) Encode() (bi []byte) {
 }
 
 // Decode will create a Packet from the given byte array
-func Decode(r PacketReader) (*Packet, error) {
+func Decode(r Reader) (*Packet, error) {
 	var length VarInt
 	if err := length.Decode(r); err != nil {
 		return nil, err
