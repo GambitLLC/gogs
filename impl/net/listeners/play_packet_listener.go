@@ -36,7 +36,7 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]by
 		// TODO: Handle all player pos & rotation packets
 		return nil, handlers.PlayerPosition(c, p, listener.S)
 	case packetids.PlayerPositionAndRotationServerbound:
-		logger.Printf("Received player pos and rotation")
+		return nil, handlers.PlayerPositionAndRotation(c, p, listener.S)
 	case packetids.PlayerRotation:
 		return nil, handlers.PlayerRotation(c, p, listener.S)
 	case packetids.Animation:

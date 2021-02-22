@@ -2,19 +2,19 @@ package impl
 
 import (
 	"bytes"
-	"github.com/google/uuid"
-	"gogs/api"
-	"gogs/api/data/chat"
-	"gogs/impl/logger"
-	"gogs/impl/net/handlers"
-	"gogs/impl/net/packet/clientbound"
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/panjf2000/gnet"
-	"gogs/api/game"
+	"gogs/api/data/chat"
+	apigame "gogs/api/game"
+	"gogs/impl/game"
+	"gogs/impl/logger"
+	"gogs/impl/net/handlers"
 	plists "gogs/impl/net/listeners"
 	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/clientbound"
 )
 
 type playerMapping struct {
@@ -24,7 +24,6 @@ type playerMapping struct {
 }
 
 type Server struct {
-	api.Server
 	gnet.EventServer
 
 	Host        string
@@ -34,32 +33,14 @@ type Server struct {
 	playerMap   *playerMapping
 }
 
-func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Player {
+func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) apigame.Player {
 	player, exists := s.playerMap.uuidToPlayer[u]
 	if exists {
 		// TODO: figure out what happens to players who connect twice
 		s.playerMap.uuidToConn[u] = conn
 		return player
 	}
-	player = &game.Player{
-		EntityID: s.numEntities,
-		UUID:     u,
-		Name:     name,
-		Position: game.Position{
-			X: 0,
-			Y: 1,
-			Z: 0,
-		},
-		Rotation: game.Rotation{
-			Yaw:   0,
-			Pitch: 0,
-		},
-		SpawnPosition: game.Position{
-			X: 0,
-			Y: 1,
-			Z: 0,
-		},
-	}
+	player = game.NewPlayer(name, u, s.numEntities)
 	s.numEntities += 1
 	s.playerMap.uuidToPlayer[u] = player
 	s.playerMap.uuidToConn[u] = conn
@@ -68,19 +49,19 @@ func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Pl
 	return player
 }
 
-func (s Server) Players() []*game.Player {
-	players := make([]*game.Player, 0, len(s.playerMap.uuidToPlayer))
+func (s Server) Players() []apigame.Player {
+	players := make([]apigame.Player, 0, len(s.playerMap.uuidToPlayer))
 	for _, player := range s.playerMap.uuidToPlayer {
-		players = append(players, player)
+		players = append(players, apigame.Player(player))
 	}
 	return players
 }
 
-func (s Server) PlayerFromConn(conn gnet.Conn) *game.Player {
+func (s Server) PlayerFromConn(conn gnet.Conn) apigame.Player {
 	return s.playerMap.connToPlayer[conn]
 }
 
-func (s Server) PlayerFromUUID(uuid uuid.UUID) *game.Player {
+func (s Server) PlayerFromUUID(uuid uuid.UUID) apigame.Player {
 	return s.playerMap.uuidToPlayer[uuid]
 }
 
@@ -142,7 +123,7 @@ func (s *Server) OnClosed(c gnet.Conn, _ error) gnet.Action {
 		delete(s.playerMap.uuidToConn, p.UUID)
 		delete(s.playerMap.uuidToPlayer, p.UUID)
 		delete(s.playerMap.connToPlayer, c)
-		_ = handlers.Disconnect(*p, s)
+		_ = handlers.Disconnect(p, s)
 	}
 
 	return gnet.None
@@ -181,6 +162,11 @@ func (s *Server) Tick() (delay time.Duration, action gnet.Action) {
 		}
 	}
 
+	for _, p := range s.playerMap.uuidToPlayer {
+		p.Tick(s)
+	}
+
 	s.tickCount++
+	// tick every 50 ms (20 tps)
 	return time.Duration(50000000 - time.Since(startTime).Nanoseconds()), gnet.None
 }

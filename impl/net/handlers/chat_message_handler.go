@@ -18,12 +18,12 @@ func ChatMessage(c gnet.Conn, p *pk.Packet, s api.Server) error {
 		return err
 	}
 	player := s.PlayerFromConn(c)
-	logger.Printf("Received chat message `%v` from %v", m.Message, player.Name)
+	logger.Printf("Received chat message `%v` from %v", m.Message, player.GetName())
 
 	// create message event
-	msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name, m.Message))
+	msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.GetName(), m.Message))
 	event := events.PlayerChatData{
-		Player:     player,
+		Player:     &player,
 		Recipients: s.Players(),
 		Message:    msg,
 	}
@@ -33,10 +33,10 @@ func ChatMessage(c gnet.Conn, p *pk.Packet, s api.Server) error {
 	packet := clientbound.ChatMessage{
 		JSONData: pk.Chat(event.Message.AsJSON()),
 		Position: 0,
-		Sender:   pk.UUID(event.Player.UUID),
+		Sender:   pk.UUID((*event.Player).GetUUID()),
 	}.CreatePacket().Encode()
 	for _, p := range event.Recipients {
-		c := s.ConnFromUUID(p.UUID)
+		c := s.ConnFromUUID(p.GetUUID())
 		if err := c.AsyncWrite(packet); err != nil {
 			return err
 		}

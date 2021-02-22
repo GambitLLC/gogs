@@ -47,7 +47,7 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 		buf.Write(clientbound.JoinGame{
 			EntityID:     12193,
 			IsHardcore:   false,
-			Gamemode:     1,
+			Gamemode:     0,
 			PrevGamemode: 0,
 			WorldCount:   1,
 			WorldNames:   []pk.Identifier{"world"},
@@ -104,7 +104,7 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 			Recipes:    nil,
 		}.CreatePacket().Encode())
 
-		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
+		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(player).CreatePacket().Encode())
 
 		buf.Write(clientbound.UpdateViewPosition{
 			ChunkX: 0,
@@ -163,22 +163,22 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 			Z: 0,
 		}}.CreatePacket().Encode())
 
-		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
+		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(player).CreatePacket().Encode())
 
 		// send time update with negative time to keep sun in position
 		buf.Write(clientbound.TimeUpdate{WorldAge: 0, TimeOfDay: -6000}.CreatePacket().Encode())
 
 		// send list of players who are online
-		c := s.ConnFromUUID(player.UUID)
+		c := s.ConnFromUUID(player.GetUUID())
 		players := s.Players()
 		playerInfoArr := make([]pk.Encodable, 0, len(players))
 		for _, p := range players {
 			playerInfoArr = append(playerInfoArr, clientbound.PlayerInfoAddPlayer{
-				UUID:           pk.UUID(p.UUID),
-				Name:           pk.String(p.Name),
+				UUID:           pk.UUID(p.GetUUID()),
+				Name:           pk.String(p.GetName()),
 				NumProperties:  0,
 				Properties:     nil,
-				Gamemode:       1,
+				Gamemode:       0,
 				Ping:           1,
 				HasDisplayName: false,
 				DisplayName:    "",
@@ -196,8 +196,8 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 		}
 
 		event := events.PlayerJoinData{
-			Player:  player,
-			Message: fmt.Sprintf("%v has joined the game", player.Name),
+			Player:  &player,
+			Message: fmt.Sprintf("%v has joined the game", player.GetName()),
 		}
 		events.PlayerJoinEvent.Trigger(&event)
 
@@ -207,8 +207,8 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 			NumPlayers: 1,
 			Players: []pk.Encodable{
 				clientbound.PlayerInfoAddPlayer{
-					UUID:           pk.UUID(player.UUID),
-					Name:           pk.String(player.Name),
+					UUID:           pk.UUID(player.GetUUID()),
+					Name:           pk.String(player.GetName()),
 					NumProperties:  0,
 					Properties:     nil,
 					Gamemode:       0,
@@ -220,17 +220,17 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 		}.CreatePacket().Encode()
 		// TODO: spawn player should be occurring when players enter range (not join game), do logic elsewhere (tick?)
 		spawnPlayerPacket := clientbound.SpawnPlayer{
-			EntityID:   pk.VarInt(player.EntityID),
-			PlayerUUID: pk.UUID(player.UUID),
-			X:          pk.Double(player.Position.X),
-			Y:          pk.Double(player.Position.Y),
-			Z:          pk.Double(player.Position.Z),
-			Yaw:        pk.Angle(player.Rotation.Yaw / 360 * 256),
-			Pitch:      pk.Angle(player.Rotation.Pitch / 360 * 256),
+			EntityID:   pk.VarInt(player.GetEntityID()),
+			PlayerUUID: pk.UUID(player.GetUUID()),
+			X:          pk.Double(player.GetPosition().X),
+			Y:          pk.Double(player.GetPosition().Y),
+			Z:          pk.Double(player.GetPosition().Z),
+			Yaw:        pk.Angle(player.GetRotation().Yaw / 360 * 256),
+			Pitch:      pk.Angle(player.GetRotation().Pitch / 360 * 256),
 		}.CreatePacket().Encode()
 
 		for _, p := range s.Players() {
-			conn := s.ConnFromUUID(p.UUID)
+			conn := s.ConnFromUUID(p.GetUUID())
 			if conn != c { // Don't spawn self ...
 				_ = conn.AsyncWrite(append(playerInfoPacket, spawnPlayerPacket...))
 			}

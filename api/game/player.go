@@ -2,24 +2,16 @@ package game
 
 import (
 	"github.com/google/uuid"
+	"gogs/api/data"
 )
 
-type Player struct {
-	EntityID      int32
-	UUID          uuid.UUID
-	Name          string
-	Position      Position
-	Rotation      Rotation
-	SpawnPosition Position
-}
-
-type Position struct {
-	X float64
-	Y float64
-	Z float64
-}
-
-type Rotation struct {
-	Yaw   float32
-	Pitch float32
+type Player interface {
+	GetEntityID() int32
+	GetUUID() uuid.UUID
+	GetName() string
+	GetPosition() data.Position
+	GetRotation() data.Rotation
+	GetSpawnPosition() data.Position
+	SetPosition(data.Position)
+	SetRotation(data.Rotation)
 }

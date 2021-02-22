@@ -11,7 +11,7 @@ import (
 
 // Called when a connection is closed
 func Disconnect(player game.Player, s api.Server) error {
-	logger.Printf("Player %v disconnected", player.Name)
+	logger.Printf("Player %v disconnected", player.GetName())
 
 	// update player info for all remaining players
 	playerInfoPacket := clientbound.PlayerInfo{
@@ -19,21 +19,21 @@ func Disconnect(player game.Player, s api.Server) error {
 		NumPlayers: 1,
 		Players: []pk.Encodable{
 			clientbound.PlayerInfoRemovePlayer{
-				UUID: pk.UUID(player.UUID),
+				UUID: pk.UUID(player.GetUUID()),
 			},
 		},
 	}.CreatePacket().Encode()
 	// also destroy the entity for all players
 	destroyEntitiesPacket := clientbound.DestroyEntities{
 		Count:     1,
-		EntityIDs: []pk.VarInt{pk.VarInt(player.EntityID)},
+		EntityIDs: []pk.VarInt{pk.VarInt(player.GetEntityID())},
 	}.CreatePacket().Encode()
 	for _, p := range s.Players() {
-		_ = s.ConnFromUUID(p.UUID).AsyncWrite(append(playerInfoPacket, destroyEntitiesPacket...))
+		_ = s.ConnFromUUID(p.GetUUID()).AsyncWrite(append(playerInfoPacket, destroyEntitiesPacket...))
 	}
 
 	// TODO: trigger disconnect event
-	s.Broadcast(fmt.Sprintf("%v has left the game", player.Name))
+	s.Broadcast(fmt.Sprintf("%v has left the game", player.GetName()))
 
 	return nil
 }
