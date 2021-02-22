@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"github.com/panjf2000/gnet"
 	"gogs/impl"
 	"gogs/impl/logger"
@@ -8,10 +9,14 @@ import (
 )
 
 func main() {
-	MinecraftServer := new(impl.Server)
-	MinecraftServer.Host = "127.0.0.1"
-	MinecraftServer.Port = 25565
+	host := flag.String("host", "127.0.0.1", "host ip")
+	port := flag.Uint("port", 25565, "host port")
+	flag.Parse()
 
+	MinecraftServer := new(impl.Server)
+	MinecraftServer.Host = *host
+	MinecraftServer.Port = uint16(*port)
+	
 	connString := "tcp://" + MinecraftServer.Host + ":" + strconv.Itoa(int(MinecraftServer.Port))
 
 	logger.Error(
