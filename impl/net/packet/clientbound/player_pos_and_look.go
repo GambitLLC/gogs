@@ -21,8 +21,8 @@ func (s PlayerPositionAndLook) CreatePacket() pk.Packet {
 }
 
 func (s *PlayerPositionAndLook) FromPlayer(p game.Player) *PlayerPositionAndLook {
-	pos := p.GetPosition()
-	rot := p.GetRotation()
+	pos := p.Position()
+	rot := p.Rotation()
 	s.X = pk.Double(pos.X)
 	s.Y = pk.Double(pos.Y)
 	s.Z = pk.Double(pos.Z)

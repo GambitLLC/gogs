@@ -40,7 +40,7 @@ func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) apigame.
 		s.playerMap.uuidToConn[u] = conn
 		return player
 	}
-	player = game.NewPlayer(name, u, s.numEntities)
+	player = game.NewPlayer(name, u, conn, s.numEntities)
 	s.numEntities += 1
 	s.playerMap.uuidToPlayer[u] = player
 	s.playerMap.uuidToConn[u] = conn
@@ -120,8 +120,8 @@ func (s *Server) OnClosed(c gnet.Conn, _ error) gnet.Action {
 	//clean up all the player state
 	p, exists := s.playerMap.connToPlayer[c]
 	if exists {
-		delete(s.playerMap.uuidToConn, p.UUID)
-		delete(s.playerMap.uuidToPlayer, p.UUID)
+		delete(s.playerMap.uuidToConn, p.UUID())
+		delete(s.playerMap.uuidToPlayer, p.UUID())
 		delete(s.playerMap.connToPlayer, c)
 		_ = handlers.Disconnect(p, s)
 	}

@@ -6,12 +6,10 @@ import (
 )
 
 type Player interface {
-	GetEntityID() int32
-	GetUUID() uuid.UUID
-	GetName() string
-	GetPosition() data.Position
-	GetRotation() data.Rotation
-	GetSpawnPosition() data.Position
-	SetPosition(data.Position)
-	SetRotation(data.Rotation)
+	EntityID() int32
+	UUID() uuid.UUID
+	Name() string
+	Position() *data.Position
+	Rotation() *data.Rotation
+	SpawnPosition() *data.Position
 }

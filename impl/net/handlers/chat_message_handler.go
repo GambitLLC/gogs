@@ -18,10 +18,10 @@ func ChatMessage(c gnet.Conn, pkt *pk.Packet, s api.Server) (out []byte, err err
 		return
 	}
 	player := s.PlayerFromConn(c)
-	logger.Printf("Received chat message `%v` from %v", m.Message, player.GetName())
+	logger.Printf("Received chat message `%v` from %v", m.Message, player.Name())
 
 	// create message event
-	msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.GetName(), m.Message))
+	msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name(), m.Message))
 	event := events.PlayerChatData{
 		Player:     &player,
 		Recipients: s.Players(),
@@ -33,11 +33,11 @@ func ChatMessage(c gnet.Conn, pkt *pk.Packet, s api.Server) (out []byte, err err
 	out = clientbound.ChatMessage{
 		JSONData: pk.Chat(event.Message.AsJSON()),
 		Position: 0,
-		Sender:   pk.UUID((*event.Player).GetUUID()),
+		Sender:   pk.UUID((*event.Player).UUID()),
 	}.CreatePacket().Encode()
 	for _, p := range event.Recipients {
-		conn := s.ConnFromUUID(p.GetUUID())
-		if conn != c {	// don't send to self: React method will take out bytes and send them
+		conn := s.ConnFromUUID(p.UUID())
+		if conn != c { // don't send to self: React method will take out bytes and send them
 			_ = conn.AsyncWrite(out)
 		}
 	}

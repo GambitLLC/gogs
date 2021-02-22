@@ -27,13 +27,13 @@ func Animation(c gnet.Conn, pkt *pk.Packet, s api.Server) ([]byte, error) {
 	}
 
 	entityAnimationPacket := clientbound.EntityAnimation{
-		EntityID:  pk.VarInt(player.GetEntityID()),
+		EntityID:  pk.VarInt(player.EntityID()),
 		Animation: pk.UByte(anim),
 	}.CreatePacket().Encode()
 
 	// Send animation to everyone except self
 	for _, p := range s.Players() {
-		conn := s.ConnFromUUID(p.GetUUID())
+		conn := s.ConnFromUUID(p.UUID())
 		if conn != c {
 			_ = conn.AsyncWrite(entityAnimationPacket)
 		}

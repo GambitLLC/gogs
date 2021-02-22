@@ -2,72 +2,77 @@ package game
 
 import (
 	"github.com/google/uuid"
+	"github.com/panjf2000/gnet"
 	"gogs/api"
 	"gogs/api/data"
 	"gogs/api/game"
+	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/packetids"
 )
 
 type Player struct {
 	game.Player
-	EntityID      int32
-	UUID          uuid.UUID
-	Name          string
-	Position      data.Position
-	Rotation      data.Rotation
-	SpawnPosition data.Position
+	entityID      int32
+	uuid          uuid.UUID
+	name          string
+	position      data.Position
+	rotation      data.Rotation
+	spawnPosition data.Position
+	c             gnet.Conn
 }
 
-func NewPlayer(name string, u uuid.UUID, entityID int32) *Player {
+func NewPlayer(name string, u uuid.UUID, c gnet.Conn, entityID int32) *Player {
 	spawnPos := data.Position{
 		X: 0,
 		Y: 1,
 		Z: 0,
 	}
 	return &Player{
-		EntityID: entityID,
-		UUID:     u,
-		Name:     name,
-		Position: spawnPos,
-		Rotation: data.Rotation{
+		entityID: entityID,
+		uuid:     u,
+		name:     name,
+		position: spawnPos,
+		rotation: data.Rotation{
 			Yaw:   0,
 			Pitch: 0,
 		},
-		SpawnPosition: spawnPos,
+		spawnPosition: spawnPos,
+		c:             c,
 	}
 }
 
-func (p *Player) Tick(_ api.Server) {
+func (p *Player) Tick(s api.Server) {
+	out := pk.Marshal(packetids.EntityMovement, pk.VarInt(p.entityID)).Encode()
+
+	for _, player := range s.Players() {
+		conn := s.ConnFromUUID(player.UUID())
+		if conn != p.c {
+			_ = conn.AsyncWrite(out)
+		}
+	}
 	return
 }
 
-func (p Player) GetEntityID() int32 {
-	return p.EntityID
+func (p Player) EntityID() int32 {
+	return p.entityID
 }
 
-func (p Player) GetUUID() uuid.UUID {
-	return p.UUID
+func (p Player) UUID() uuid.UUID {
+	return p.uuid
 }
 
-func (p Player) GetName() string {
-	return p.Name
+func (p Player) Name() string {
+	return p.name
 }
 
-func (p Player) GetPosition() data.Position {
-	return p.Position
+func (p *Player) Position() *data.Position {
+	return &p.position
 }
 
-func (p Player) GetRotation() data.Rotation {
-	return p.Rotation
+func (p *Player) Rotation() *data.Rotation {
+	return &p.rotation
 }
 
-func (p *Player) SetPosition(position data.Position) {
-	p.Position = position
-}
-
-func (p *Player) SetRotation(rotation data.Rotation) {
-	p.Rotation = rotation
-}
-
-func (p Player) GetSpawnPosition() data.Position {
-	return p.SpawnPosition
+func (p *Player) SpawnPosition() *data.Position {
+	return &p.spawnPosition
 }
