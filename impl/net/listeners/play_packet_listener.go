@@ -41,6 +41,8 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) (out 
 		return handlers.PlayerRotation(c, p, listener.S)
 	case packetids.Animation:
 		return handlers.Animation(c, p, listener.S)
+	case packetids.EntityAction:
+		return handlers.EntityAction(c, p, listener.S)
 	case packetids.KeepAliveServerbound:
 		logger.Printf("Received keep alive")
 		//TODO: kick client for incorrect / untimely Keep-Alive response
