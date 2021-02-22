@@ -130,21 +130,25 @@ func (s *Server) OnClosed(c gnet.Conn, _ error) gnet.Action {
 }
 
 //On packet
-func (s *Server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Action) {
-	packet, err := pk.Decode(bytes.NewReader(frame))
-	if err != nil {
-		logger.Printf("error decoding frame into packet: %v", err)
-		return nil, gnet.None
+func (s *Server) React(frame []byte, c gnet.Conn) ([]byte, gnet.Action) {
+	out := bytes.Buffer{}
+	for buf := bytes.NewReader(frame); buf.Len() > 0; {
+		packet, err := pk.Decode(buf)
+		if err != nil {
+			logger.Printf("error decoding frame into packet: %v", err)
+			return nil, gnet.None
+		}
+
+		plist := c.Context().(plists.PacketListener)
+		res, err := plist.HandlePacket(c, packet)
+		if err != nil {
+			logger.Printf("failed to handle packet %v\n got error: %v", packet, err.Error())
+			return nil, gnet.None
+		}
+		out.Write(res)
 	}
 
-	plist := c.Context().(plists.PacketListener)
-	out, err = plist.HandlePacket(c, packet)
-	if err != nil {
-		logger.Printf("failed to handle packet %v\n got error: %v", packet, err.Error())
-		return nil, gnet.None
-	}
-
-	return out, gnet.None
+	return out.Bytes(), gnet.None
 }
 
 //On tick
