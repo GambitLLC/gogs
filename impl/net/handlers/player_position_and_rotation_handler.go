@@ -9,12 +9,12 @@ import (
 	"gogs/impl/net/packet/serverbound"
 )
 
-func PlayerPositionAndRotation(c gnet.Conn, pkt *pk.Packet, s api.Server) error {
+func PlayerPositionAndRotation(c gnet.Conn, pkt *pk.Packet, s api.Server) ([]byte, error) {
 	player := s.PlayerFromConn(c)
 	logger.Printf("Received player pos and rotation from %v", player.GetName())
 	in := serverbound.PlayerPositionAndRotation{}
 	if err := in.FromPacket(pkt); err != nil {
-		return err
+		return nil, err
 	}
 
 	player.SetPosition(data.Position{
@@ -30,5 +30,5 @@ func PlayerPositionAndRotation(c gnet.Conn, pkt *pk.Packet, s api.Server) error 
 		OnGround: bool(in.OnGround),
 	})
 
-	return nil
+	return nil, nil
 }

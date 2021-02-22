@@ -21,7 +21,7 @@ type StatusPacketListener struct {
 func (listener StatusPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]byte, error) {
 	switch p.ID {
 	case packetids.StatusRequest:
-		return nil, handlers.StatusRequest(c, p, listener.S)
+		return handlers.StatusRequest(c, p, listener.S)
 	case packetids.StatusPing:
 		logger.Printf("Received status ping packet")
 		ping := serverbound.QueryStatusPing{}

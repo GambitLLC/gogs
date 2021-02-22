@@ -13,14 +13,14 @@ import (
 	"gogs/impl/net/packet/packetids"
 )
 
-func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
-	if p.ID != 0 {
-		return errors.New("login start expects Packet ID 0")
+func LoginStart(c gnet.Conn, pkt *pk.Packet, s api.Server) (out []byte, err error) {
+	if pkt.ID != 0 {
+		return nil, errors.New("login start expects Packet ID 0")
 	}
 
 	var name pk.String
-	if err := p.Unmarshal(&name); err != nil {
-		return err
+	if err = pkt.Unmarshal(&name); err != nil {
+		return nil, err
 	}
 
 	logger.Printf("Received login start packet from player %v", name)
@@ -28,7 +28,7 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 	//trigger login event
 	event := events.PlayerLoginData{
 		Name: string(name),
-		Conn: c,
+		Conn: c,	// for ip address bans? consider changing to just ip
 	}
 	events.PlayerLoginEvent.Trigger(&event)
 
@@ -169,7 +169,6 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 		buf.Write(clientbound.TimeUpdate{WorldAge: 0, TimeOfDay: -6000}.CreatePacket().Encode())
 
 		// send list of players who are online
-		c := s.ConnFromUUID(player.GetUUID())
 		players := s.Players()
 		playerInfoArr := make([]pk.Encodable, 0, len(players))
 		for _, p := range players {
@@ -206,10 +205,8 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 			}
 		}
 
-		if err := c.AsyncWrite(buf.Bytes()); err != nil {
-			_ = c.Close()
-			return err
-		}
+		out = buf.Bytes()
+
 
 		event := events.PlayerJoinData{
 			Player:  &player,
@@ -247,7 +244,7 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 
 		for _, p := range s.Players() {
 			conn := s.ConnFromUUID(p.GetUUID())
-			if conn != c { // Don't spawn self ...
+			if conn != c { // Don't send spawn player packets to self...
 				_ = conn.AsyncWrite(append(playerInfoPacket, spawnPlayerPacket...))
 			}
 		}
@@ -256,8 +253,8 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 
 	} else {
 		// TODO: send kick message
-		return errors.New("login not allowed not yet implemented")
+		return nil, errors.New("login not allowed not yet implemented")
 	}
 
-	return nil
+	return
 }

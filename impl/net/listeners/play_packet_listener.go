@@ -16,13 +16,13 @@ type PlayPacketListener struct {
 	protocolVersion int32
 }
 
-func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]byte, error) {
+func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) (out []byte, err error) {
 	switch p.ID {
 	case packetids.TeleportConfirm:
 		// TODO: Handle this
 		logger.Printf("Received teleport confirm")
 	case packetids.ChatMessageServerbound:
-		if err := handlers.ChatMessage(c, p, listener.S); err != nil {
+		if out, err = handlers.ChatMessage(c, p, listener.S); err != nil {
 			return nil, err
 		}
 	case packetids.ClientSettings:
@@ -34,13 +34,13 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]by
 		}
 	case packetids.PlayerPosition:
 		// TODO: Handle all player pos & rotation packets
-		return nil, handlers.PlayerPosition(c, p, listener.S)
+		return handlers.PlayerPosition(c, p, listener.S)
 	case packetids.PlayerPositionAndRotationServerbound:
-		return nil, handlers.PlayerPositionAndRotation(c, p, listener.S)
+		return handlers.PlayerPositionAndRotation(c, p, listener.S)
 	case packetids.PlayerRotation:
-		return nil, handlers.PlayerRotation(c, p, listener.S)
+		return handlers.PlayerRotation(c, p, listener.S)
 	case packetids.Animation:
-		return nil, handlers.Animation(c, p, listener.S)
+		return handlers.Animation(c, p, listener.S)
 	case packetids.KeepAliveServerbound:
 		logger.Printf("Received keep alive")
 		//TODO: kick client for incorrect / untimely Keep-Alive response
@@ -53,5 +53,5 @@ func (listener PlayPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]by
 		return nil, errors.New("not yet implemented")
 	}
 
-	return nil, nil
+	return
 }

@@ -23,11 +23,12 @@ type LoginPacketListener struct {
 	state           LoginState
 }
 
-func (listener LoginPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]byte, error) {
+func (listener LoginPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) (out []byte, err error) {
 	switch listener.state {
 	case start:
-		if err := handlers.LoginStart(c, p, listener.S); err != nil {
-			return nil, err
+		if out, err = handlers.LoginStart(c, p, listener.S); err != nil {
+			_ = c.Close()	// LoginStart errors won't return any output
+			return
 		}
 		c.SetContext(PlayPacketListener{
 			S:               listener.S,
@@ -40,5 +41,5 @@ func (listener LoginPacketListener) HandlePacket(c gnet.Conn, p *pk.Packet) ([]b
 		logger.Printf("LoginPacketListener is in an unknown state: %d", listener.state)
 		return nil, c.Close()
 	}
-	return nil, nil
+	return
 }

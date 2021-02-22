@@ -8,15 +8,15 @@ import (
 	"gogs/impl/net/packet/clientbound"
 )
 
-func Animation(c gnet.Conn, pkt *pk.Packet, s api.Server) error {
+func Animation(c gnet.Conn, pkt *pk.Packet, s api.Server) ([]byte, error) {
 	var hand pk.VarInt
 	if err := pkt.Unmarshal(&hand); err != nil {
-		return err
+		return nil, err
 	}
 
 	if hand != 0 && hand != 1 {
 		_ = c.Close() // TODO: send disconnect packet
-		return fmt.Errorf("animation handler got hand %d", hand)
+		return nil, fmt.Errorf("animation handler got hand %d", hand)
 	}
 
 	player := s.PlayerFromConn(c)
@@ -31,6 +31,7 @@ func Animation(c gnet.Conn, pkt *pk.Packet, s api.Server) error {
 		Animation: pk.UByte(anim),
 	}.CreatePacket().Encode()
 
+	// Send animation to everyone except self
 	for _, p := range s.Players() {
 		conn := s.ConnFromUUID(p.GetUUID())
 		if conn != c {
@@ -38,5 +39,5 @@ func Animation(c gnet.Conn, pkt *pk.Packet, s api.Server) error {
 		}
 	}
 
-	return nil
+	return nil, nil
 }

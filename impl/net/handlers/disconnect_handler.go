@@ -29,6 +29,7 @@ func Disconnect(player game.Player, s api.Server) error {
 		EntityIDs: []pk.VarInt{pk.VarInt(player.GetEntityID())},
 	}.CreatePacket().Encode()
 	for _, p := range s.Players() {
+		// Disconnected player connection should have already been removed from the server list
 		_ = s.ConnFromUUID(p.GetUUID()).AsyncWrite(append(playerInfoPacket, destroyEntitiesPacket...))
 	}
 

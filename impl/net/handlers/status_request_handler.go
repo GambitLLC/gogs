@@ -9,7 +9,7 @@ import (
 	"gogs/impl/net/packet/clientbound"
 )
 
-func StatusRequest(c gnet.Conn, _ *pk.Packet, s api.Server) error {
+func StatusRequest(c gnet.Conn, _ *pk.Packet, s api.Server) ([]byte, error) {
 	logger.Printf("Received status request packet")
 	// TODO: fill response with info from server
 	resp := response{
@@ -37,7 +37,7 @@ func StatusRequest(c gnet.Conn, _ *pk.Packet, s api.Server) error {
 		JSONResponse: pk.String(jsonBytes),
 	}.CreatePacket().Encode()
 
-	return c.AsyncWrite(packet)
+	return packet, nil
 }
 
 type response struct {
