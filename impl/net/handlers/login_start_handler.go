@@ -190,6 +190,22 @@ func LoginStart(c gnet.Conn, p *pk.Packet, s api.Server) error {
 			Players:    playerInfoArr,
 		}.CreatePacket().Encode())
 
+		// also add spawn player packets for players already online
+		// TODO: this logic should be done elsewhere (when players enter range) (tick?)
+		for _, p := range players {
+			if p.GetUUID() != player.GetUUID() {
+				buf.Write(clientbound.SpawnPlayer{
+					EntityID:   pk.VarInt(p.GetEntityID()),
+					PlayerUUID: pk.UUID(p.GetUUID()),
+					X:          pk.Double(p.GetPosition().X),
+					Y:          pk.Double(p.GetPosition().Y),
+					Z:          pk.Double(p.GetPosition().Z),
+					Yaw:        pk.Angle(p.GetRotation().Yaw / 360 * 256),
+					Pitch:      pk.Angle(p.GetRotation().Pitch / 360 * 256),
+				}.CreatePacket().Encode())
+			}
+		}
+
 		if err := c.AsyncWrite(buf.Bytes()); err != nil {
 			_ = c.Close()
 			return err
