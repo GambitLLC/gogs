@@ -6,8 +6,6 @@ import (
 	"gogs/api"
 	"gogs/api/data"
 	"gogs/api/game"
-	pk "gogs/impl/net/packet"
-	"gogs/impl/net/packet/packetids"
 )
 
 type Player struct {
@@ -41,15 +39,7 @@ func NewPlayer(name string, u uuid.UUID, c gnet.Conn, entityID int32) *Player {
 	}
 }
 
-func (p *Player) Tick(s api.Server) {
-	out := pk.Marshal(packetids.EntityMovement, pk.VarInt(p.entityID)).Encode()
-
-	for _, player := range s.Players() {
-		conn := s.ConnFromUUID(player.UUID())
-		if conn != p.c {
-			_ = conn.AsyncWrite(out)
-		}
-	}
+func (p *Player) Tick(_ api.Server) {
 	return
 }
 
