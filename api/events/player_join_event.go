@@ -5,7 +5,7 @@ import "gogs/api/game"
 var PlayerJoinEvent playerJoinEvent
 
 type PlayerJoinData struct {
-	Player  *game.Player
+	Player  game.Player
 	Message string
 }
 

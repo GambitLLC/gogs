@@ -11,6 +11,6 @@ type ClientSettings struct {
 	MainHand           pk.VarInt
 }
 
-func (s *ClientSettings) FromPacket(packet *pk.Packet) error {
+func (s *ClientSettings) FromPacket(packet pk.Packet) error {
 	return packet.Unmarshal(&s.Locale, &s.ViewDistance, &s.ChatMode, &s.ChatColors, &s.DisplayedSkinParts, &s.MainHand)
 }

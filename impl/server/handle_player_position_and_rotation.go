@@ -1,8 +1,7 @@
-package handlers
+package server
 
 import (
 	"github.com/panjf2000/gnet"
-	"gogs/api"
 	"gogs/api/data"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
@@ -10,12 +9,12 @@ import (
 	"gogs/impl/net/packet/serverbound"
 )
 
-func PlayerPositionAndRotation(c gnet.Conn, pkt *pk.Packet, s api.Server) ([]byte, error) {
-	player := s.PlayerFromConn(c)
+func (s *Server) handlePlayerPositionAndRotation(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+	player := s.PlayerFromConn(conn)
 	logger.Printf("Received player pos and rotation from %v", player.Name())
 	in := serverbound.PlayerPositionAndRotation{}
-	if err := in.FromPacket(pkt); err != nil {
-		return nil, err
+	if err = in.FromPacket(pkt); err != nil {
+		return
 	}
 
 	outPacket := clientbound.EntityPositionAndRotation{
@@ -26,19 +25,15 @@ func PlayerPositionAndRotation(c gnet.Conn, pkt *pk.Packet, s api.Server) ([]byt
 		Yaw:      pk.Angle(in.Yaw / 360 * 256),
 		Pitch:    pk.Angle(in.Pitch / 360 * 256),
 		OnGround: in.OnGround,
-	}.CreatePacket().Encode()
+	}.CreatePacket()
+	s.broadcastPacket(outPacket, conn)
+
 	// also send head rotation packet
-	outPacket = append(outPacket, clientbound.EntityHeadLook{
+	outPacket = clientbound.EntityHeadLook{
 		EntityID: pk.VarInt(player.EntityID()),
 		HeadYaw:  pk.Angle(in.Yaw / 360 * 256),
-	}.CreatePacket().Encode()...)
-
-	for _, player := range s.Players() {
-		conn := s.ConnFromUUID(player.UUID())
-		if conn != c {
-			_ = conn.AsyncWrite(outPacket)
-		}
-	}
+	}.CreatePacket()
+	s.broadcastPacket(outPacket, conn)
 
 	*player.Position() = data.Position{
 		X:        float64(in.X),

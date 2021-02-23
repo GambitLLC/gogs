@@ -3,13 +3,10 @@ package game
 import (
 	"github.com/google/uuid"
 	"github.com/panjf2000/gnet"
-	"gogs/api"
 	"gogs/api/data"
-	"gogs/api/game"
 )
 
 type Player struct {
-	game.Player
 	entityID      int32
 	uuid          uuid.UUID
 	name          string
@@ -37,10 +34,6 @@ func NewPlayer(name string, u uuid.UUID, c gnet.Conn, entityID int32) *Player {
 		spawnPosition: spawnPos,
 		c:             c,
 	}
-}
-
-func (p *Player) Tick(_ api.Server) {
-	return
 }
 
 func (p Player) EntityID() int32 {

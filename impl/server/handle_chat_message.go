@@ -1,9 +1,8 @@
-package handlers
+package server
 
 import (
 	"fmt"
 	"github.com/panjf2000/gnet"
-	"gogs/api"
 	"gogs/api/data/chat"
 	"gogs/api/events"
 	"gogs/impl/logger"
@@ -12,12 +11,12 @@ import (
 	"gogs/impl/net/packet/serverbound"
 )
 
-func ChatMessage(c gnet.Conn, pkt *pk.Packet, s api.Server) (out []byte, err error) {
+func (s *Server) handleChatMessage(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
 	m := serverbound.ChatMessage{}
 	if err = m.FromPacket(pkt); err != nil {
 		return
 	}
-	player := s.PlayerFromConn(c)
+	player := s.PlayerFromConn(conn)
 	logger.Printf("Received chat message `%v` from %v", m.Message, player.Name())
 
 	// create message event
@@ -36,10 +35,8 @@ func ChatMessage(c gnet.Conn, pkt *pk.Packet, s api.Server) (out []byte, err err
 		Sender:   pk.UUID((*event.Player).UUID()),
 	}.CreatePacket().Encode()
 	for _, p := range event.Recipients {
-		conn := s.ConnFromUUID(p.UUID())
-		if conn != c { // don't send to self: React method will take out bytes and send them
-			_ = conn.AsyncWrite(out)
-		}
+		c := s.ConnFromUUID(p.UUID())
+		_ = c.AsyncWrite(out)
 	}
-	return
+	return nil, nil
 }

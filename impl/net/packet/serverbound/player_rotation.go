@@ -8,6 +8,6 @@ type PlayerRotation struct {
 	OnGround pk.Boolean
 }
 
-func (s *PlayerRotation) FromPacket(packet *pk.Packet) error {
+func (s *PlayerRotation) FromPacket(packet pk.Packet) error {
 	return packet.Unmarshal(&s.Yaw, &s.Pitch, &s.OnGround)
 }

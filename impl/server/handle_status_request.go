@@ -1,15 +1,13 @@
-package handlers
+package server
 
 import (
 	"encoding/json"
-	"github.com/panjf2000/gnet"
-	"gogs/api"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 )
 
-func StatusRequest(c gnet.Conn, _ *pk.Packet, s api.Server) ([]byte, error) {
+func (s *Server) handleStatusRequest() ([]byte, error) {
 	logger.Printf("Received status request packet")
 	// TODO: fill response with info from server
 	resp := response{
@@ -22,7 +20,7 @@ func StatusRequest(c gnet.Conn, _ *pk.Packet, s api.Server) ([]byte, error) {
 		},
 		Players: players{
 			Max:    20,
-			Online: len(s.Players()),
+			Online: len(s.playerMap.uuidToPlayer),
 			Sample: nil,
 		},
 		Favicon: "",

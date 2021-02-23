@@ -9,6 +9,6 @@ type PlayerPosition struct {
 	OnGround pk.Boolean
 }
 
-func (s *PlayerPosition) FromPacket(packet *pk.Packet) error {
+func (s *PlayerPosition) FromPacket(packet pk.Packet) error {
 	return packet.Unmarshal(&s.X, &s.Y, &s.Z, &s.OnGround)
 }

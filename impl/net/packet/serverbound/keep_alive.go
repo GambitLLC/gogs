@@ -6,6 +6,6 @@ type KeepAlive struct {
 	ID pk.Long
 }
 
-func (p *KeepAlive) FromPacket(packet *pk.Packet) error {
+func (p *KeepAlive) FromPacket(packet pk.Packet) error {
 	return packet.Unmarshal(&p.ID)
 }

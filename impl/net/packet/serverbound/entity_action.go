@@ -8,6 +8,6 @@ type EntityAction struct {
 	JumpBoost pk.VarInt
 }
 
-func (p *EntityAction) FromPacket(packet *pk.Packet) error {
+func (p *EntityAction) FromPacket(packet pk.Packet) error {
 	return packet.Unmarshal(&p.EntityID, &p.ActionID, &p.JumpBoost)
 }

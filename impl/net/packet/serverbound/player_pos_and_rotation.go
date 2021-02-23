@@ -11,6 +11,6 @@ type PlayerPositionAndRotation struct {
 	OnGround pk.Boolean
 }
 
-func (s *PlayerPositionAndRotation) FromPacket(packet *pk.Packet) error {
+func (s *PlayerPositionAndRotation) FromPacket(packet pk.Packet) error {
 	return packet.Unmarshal(&s.X, &s.Y, &s.Z, &s.Yaw, &s.Pitch, &s.OnGround)
 }
