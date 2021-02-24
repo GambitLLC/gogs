@@ -142,6 +142,8 @@ func (s *Server) handlePlayState(conn gnet.Conn, pkt pk.Packet) (out []byte, err
 		return s.handleEntityAction(conn, pkt)
 	case packetids.InteractEntity:
 		return s.handleInteractEntity(conn, pkt)
+	case packetids.ClientStatus:
+		return s.handleClientStatus(conn, pkt)
 	case packetids.KeepAliveServerbound:
 		logger.Printf("Received keep alive")
 		//TODO: kick client for incorrect / untimely Keep-Alive response
