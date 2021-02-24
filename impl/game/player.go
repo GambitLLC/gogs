@@ -10,10 +10,11 @@ type Player struct {
 	entityID      int32
 	uuid          uuid.UUID
 	name          string
+	health        uint8
 	position      data.Position
 	rotation      data.Rotation
 	spawnPosition data.Position
-	c             gnet.Conn
+	conn          gnet.Conn
 }
 
 func NewPlayer(name string, u uuid.UUID, c gnet.Conn, entityID int32) *Player {
@@ -26,13 +27,14 @@ func NewPlayer(name string, u uuid.UUID, c gnet.Conn, entityID int32) *Player {
 		entityID: entityID,
 		uuid:     u,
 		name:     name,
+		health:   20,
 		position: spawnPos,
 		rotation: data.Rotation{
 			Yaw:   0,
 			Pitch: 0,
 		},
 		spawnPosition: spawnPos,
-		c:             c,
+		conn:          c,
 	}
 }
 
@@ -58,4 +60,19 @@ func (p *Player) Rotation() *data.Rotation {
 
 func (p *Player) SpawnPosition() *data.Position {
 	return &p.spawnPosition
+}
+
+func (p Player) Conn() gnet.Conn {
+	return p.conn
+}
+
+// Damages a player and returns the remaining hp
+func (p *Player) Damage(amt uint8) uint8 {
+	if amt > p.health {
+		p.health = 0
+		return 0
+	}
+
+	p.health -= amt
+	return p.health
 }

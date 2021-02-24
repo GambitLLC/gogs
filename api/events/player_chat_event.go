@@ -8,7 +8,7 @@ import (
 var PlayerChatEvent playerChatEvent
 
 type PlayerChatData struct {
-	Player     *game.Player
+	Player     game.Player
 	Recipients []game.Player
 	Message    chat.Message
 	Format     string // First argument will be Player.Name, second will be Message

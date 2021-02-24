@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Server) handlePlayerPositionAndRotation(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
-	player := s.PlayerFromConn(conn)
+	player := s.playerFromConn(conn)
 	logger.Printf("Received player pos and rotation from %v", player.Name())
 	in := serverbound.PlayerPositionAndRotation{}
 	if err = in.FromPacket(pkt); err != nil {

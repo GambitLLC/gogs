@@ -14,7 +14,7 @@ func (s *Server) handleEntityAction(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 		return nil, err
 	}
 
-	player := s.PlayerFromConn(conn)
+	player := s.playerFromConn(conn)
 	switch in.ActionID {
 	case 0: // start sneaking
 		s.broadcastPacket(clientbound.EntityMetadata{
@@ -40,7 +40,8 @@ func (s *Server) handleEntityAction(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 	case 7: // open horse inventory
 	case 8: // start flying with elytra
 	default:
-		return nil, fmt.Errorf("invalid action id %d", in.ActionID)
+		_ = conn.Close()
+		return nil, fmt.Errorf("entity action got invalid action id %d", in.ActionID)
 	}
 
 	return nil, nil

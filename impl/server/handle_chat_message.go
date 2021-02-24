@@ -16,13 +16,13 @@ func (s *Server) handleChatMessage(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 	if err = m.FromPacket(pkt); err != nil {
 		return
 	}
-	player := s.PlayerFromConn(conn)
+	player := s.playerFromConn(conn)
 	logger.Printf("Received chat message `%v` from %v", m.Message, player.Name())
 
 	// create message event
 	msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name(), m.Message))
 	event := events.PlayerChatData{
-		Player:     &player,
+		Player:     player,
 		Recipients: s.Players(),
 		Message:    msg,
 	}
@@ -32,10 +32,10 @@ func (s *Server) handleChatMessage(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 	out = clientbound.ChatMessage{
 		JSONData: pk.Chat(event.Message.AsJSON()),
 		Position: 0,
-		Sender:   pk.UUID((*event.Player).UUID()),
+		Sender:   pk.UUID(event.Player.UUID()),
 	}.CreatePacket().Encode()
 	for _, p := range event.Recipients {
-		c := s.ConnFromUUID(p.UUID())
+		c := s.connFromUUID(p.UUID())
 		_ = c.AsyncWrite(out)
 	}
 	return nil, nil

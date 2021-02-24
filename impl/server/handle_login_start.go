@@ -42,7 +42,7 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 			name,
 		).Encode())
 
-		player := s.CreatePlayer(string(name), u, conn).(*game.Player)
+		player := s.createPlayer(string(name), u, conn)
 		buf.Write(s.joinGamePacket(player).Encode())
 
 		buf.Write(clientbound.HeldItemChange{}.CreatePacket().Encode())

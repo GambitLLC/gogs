@@ -11,16 +11,16 @@ import (
 	"github.com/panjf2000/gnet"
 	"gogs/api/data/chat"
 	api "gogs/api/game"
-	implgame "gogs/impl/game"
+	"gogs/impl/game"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 )
 
 type playerMapping struct {
-	uuidToPlayer map[uuid.UUID]*implgame.Player
+	uuidToPlayer map[uuid.UUID]*game.Player
 	uuidToConn   map[uuid.UUID]gnet.Conn
-	connToPlayer map[gnet.Conn]*implgame.Player
+	connToPlayer map[gnet.Conn]*game.Player
 }
 
 type Server struct {
@@ -35,27 +35,6 @@ type Server struct {
 	playerMap *playerMapping
 }
 
-func (s *Server) CreatePlayer(name string, u uuid.UUID, conn gnet.Conn) api.Player {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	//player, exists := s.playerMap.uuidToPlayer[u]
-	//if exists {
-	//	// TODO: figure out what happens to players who connect twice
-	//	s.playerMap.uuidToConn[u] = conn
-	//	s.playerMap.connToPlayer[conn] = player
-	//	return player
-	//}
-
-	player := implgame.NewPlayer(name, u, conn, s.numEntities)
-	s.numEntities += 1
-	s.playerMap.uuidToPlayer[u] = player
-	s.playerMap.uuidToConn[u] = conn
-	s.playerMap.connToPlayer[conn] = player
-
-	return player
-}
-
 func (s *Server) Players() []api.Player {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -67,25 +46,11 @@ func (s *Server) Players() []api.Player {
 	return players
 }
 
-func (s *Server) PlayerFromConn(conn gnet.Conn) api.Player {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.playerMap.connToPlayer[conn]
-}
-
 func (s *Server) PlayerFromUUID(uuid uuid.UUID) api.Player {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	return s.playerMap.uuidToPlayer[uuid]
-}
-
-func (s *Server) ConnFromUUID(uuid uuid.UUID) gnet.Conn {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.playerMap.uuidToConn[uuid]
 }
 
 func (s *Server) Broadcast(text string) {
@@ -101,6 +66,55 @@ func (s *Server) Broadcast(text string) {
 	s.broadcastPacket(pkt, nil)
 }
 
+func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Player {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	//player, exists := s.playerMap.uuidToPlayer[u]
+	//if exists {
+	//	// TODO: figure out what happens to players who connect twice
+	//	s.playerMap.uuidToConn[u] = conn
+	//	s.playerMap.connToPlayer[conn] = player
+	//	return player
+	//}
+
+	player := game.NewPlayer(name, u, conn, s.numEntities)
+	s.numEntities += 1
+	s.playerMap.uuidToPlayer[u] = player
+	s.playerMap.uuidToConn[u] = conn
+	s.playerMap.connToPlayer[conn] = player
+
+	return player
+}
+
+func (s *Server) playerFromConn(conn gnet.Conn) *game.Player {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.playerMap.connToPlayer[conn]
+}
+
+func (s *Server) connFromUUID(uuid uuid.UUID) gnet.Conn {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.playerMap.uuidToConn[uuid]
+}
+
+func (s *Server) playerFromEntityID(id int32) *game.Player {
+	// todo: consider creating a map
+	// todo: should be getEntity() and not just for players
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, p := range s.playerMap.uuidToPlayer {
+		if p.EntityID() == id {
+			return p
+		}
+	}
+	return nil
+}
+
 func (s *Server) broadcastPacket(pkt pk.Packet, conn gnet.Conn) {
 	out := pkt.Encode()
 	s.mu.RLock()
@@ -114,9 +128,9 @@ func (s *Server) broadcastPacket(pkt pk.Packet, conn gnet.Conn) {
 
 func (s *Server) Init() {
 	s.playerMap = &playerMapping{
-		uuidToPlayer: make(map[uuid.UUID]*implgame.Player),
+		uuidToPlayer: make(map[uuid.UUID]*game.Player),
 		uuidToConn:   make(map[uuid.UUID]gnet.Conn),
-		connToPlayer: make(map[gnet.Conn]*implgame.Player),
+		connToPlayer: make(map[gnet.Conn]*game.Player),
 	}
 	// TODO: set up Server initialization (world, etc)
 

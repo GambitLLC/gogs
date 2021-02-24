@@ -19,7 +19,7 @@ func (s *Server) handleAnimation(conn gnet.Conn, pkt pk.Packet) (out []byte, err
 		return
 	}
 
-	player := s.PlayerFromConn(conn)
+	player := s.playerFromConn(conn)
 
 	anim := 0 // swing main arm
 	if hand == 1 {
