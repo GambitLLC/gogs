@@ -214,7 +214,7 @@ func (s *Server) joinGamePacket(player *game.Player) pk.Packet {
 		RDI:          false,
 		ERS:          false,
 		IsDebug:      false,
-		IsFlat:       false,
+		IsFlat:       true,
 	}.CreatePacket()
 }
 

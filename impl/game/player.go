@@ -66,13 +66,6 @@ func (p Player) Conn() gnet.Conn {
 	return p.conn
 }
 
-// Damages a player and returns the remaining hp
-func (p *Player) Damage(amt uint8) uint8 {
-	if amt > p.health {
-		p.health = 0
-		return 0
-	}
-
-	p.health -= amt
-	return p.health
+func (p *Player) Health() *uint8 {
+	return &p.health
 }
