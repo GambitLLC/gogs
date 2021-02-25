@@ -11,9 +11,9 @@ type CompactedDataArray struct {
 }
 
 func (s *CompactedDataArray) Init(bitsPerValue int, capacity int) {
-	s.Data = make([]pk.Long, capacity)
 	s.bitsPerValue = bitsPerValue
 	s.valuesPerLong = 64 / bitsPerValue
+	s.Data = make([]pk.Long, capacity/s.valuesPerLong)
 	s.capacity = capacity
 	s.bitMask = (1 << bitsPerValue) - 1
 }

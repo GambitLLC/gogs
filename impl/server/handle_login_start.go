@@ -229,11 +229,11 @@ func (s *Server) chunkDataPackets() []byte {
 		biomes[i] = 1
 	}
 
-	bitsPerBlock := 16
+	bitsPerBlock := 15
 
 	blockData := util.CompactedDataArray{}
-	blockData.Init(bitsPerBlock, 4096*bitsPerBlock/64)
-	for i := 0; i < 4; i++ {
+	blockData.Init(bitsPerBlock, 4096)
+	for i := 0; i < 256; i++ {
 		blockData.Set(i, 9)
 	}
 	//blockData.Set(0, 1)
