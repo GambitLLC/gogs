@@ -20,6 +20,6 @@ func main() {
 	connString := "tcp://" + MinecraftServer.Host + ":" + strconv.Itoa(int(MinecraftServer.Port))
 
 	logger.Error(
-		gnet.Serve(MinecraftServer, connString, gnet.WithMulticore(true), gnet.WithTicker(true)),
+		gnet.Serve(MinecraftServer, connString, gnet.WithMulticore(false), gnet.WithTicker(true)),
 	)
 }

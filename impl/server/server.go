@@ -33,6 +33,7 @@ type Server struct {
 
 	mu        sync.RWMutex
 	playerMap *playerMapping
+	world     *game.World
 }
 
 func (s *Server) Players() []api.Player {
@@ -133,6 +134,7 @@ func (s *Server) Init() {
 		connToPlayer: make(map[gnet.Conn]*game.Player),
 	}
 	// TODO: set up Server initialization (world, etc)
+	s.world = &game.World{}
 
 	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
 }
