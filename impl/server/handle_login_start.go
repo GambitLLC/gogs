@@ -11,6 +11,8 @@ import (
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/packetids"
+	"gogs/impl/util"
+	"log"
 )
 
 func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
@@ -167,7 +169,7 @@ func (s *Server) joinGamePacket(player *game.Player) pk.Packet {
 	return clientbound.JoinGame{
 		EntityID:     pk.Int(player.EntityID()),
 		IsHardcore:   false,
-		Gamemode:     0, // TODO: fill with player specific details
+		Gamemode:     1, // TODO: fill with player specific details
 		PrevGamemode: 0,
 		WorldCount:   1,
 		WorldNames:   []pk.Identifier{"world"},
@@ -227,13 +229,36 @@ func (s *Server) chunkDataPackets() []byte {
 		biomes[i] = 1
 	}
 
-	blockData := make([]pk.Long, 256)
-	for i := 0; i < 16; i++ {
-		blockData[i] = 0x1111111111111111
+	bitsPerBlock := 16
+
+	blockData := util.CompactedDataArray{}
+	blockData.Init(bitsPerBlock, 4096*bitsPerBlock/64)
+	for i := 0; i < 4; i++ {
+		blockData.Set(i, 9)
+	}
+	//blockData.Set(0, 1)
+
+	for _, v := range blockData.Data {
+		if v == 0 {
+			break
+		}
+		log.Printf("%064b", uint64(v))
 	}
 
 	for x := -6; x < 6; x++ {
 		for z := -6; z < 6; z++ {
+			chunkDataArray := clientbound.ChunkDataArray{
+				clientbound.ChunkSection{
+					BlockCount:   4096,
+					BitsPerBlock: pk.UByte(bitsPerBlock),
+					Palette: clientbound.ChunkPalette{
+						Length:  2,
+						Palette: []pk.VarInt{0, 1},
+					},
+					DataArrayLength: pk.VarInt(len(blockData.Data)),
+					DataArray:       blockData.Data,
+				},
+			}
 			chunk := clientbound.ChunkData{
 				ChunkX:         pk.Int(x),
 				ChunkZ:         pk.Int(z),
@@ -245,21 +270,10 @@ func (s *Server) chunkDataPackets() []byte {
 						WorldSurface:   make([]int64, 37),
 					},
 				},
-				BiomesLength: 1024,
-				Biomes:       biomes,
-				Size:         2056,
-				Data: clientbound.ChunkDataArray{
-					clientbound.ChunkSection{
-						BlockCount:   64,
-						BitsPerBlock: 4,
-						Palette: clientbound.ChunkPalette{
-							Length:  2,
-							Palette: []pk.VarInt{0, 1},
-						},
-						DataArrayLength: 256,
-						DataArray:       blockData,
-					},
-				},
+				BiomesLength:     1024,
+				Biomes:           biomes,
+				Size:             pk.VarInt(len(chunkDataArray.Encode())),
+				Data:             chunkDataArray,
 				NumBlockEntities: 0,
 				BlockEntities:    nil,
 			}.CreatePacket().Encode()

@@ -68,7 +68,9 @@ func (s ChunkSection) Encode() []byte {
 	buf := bytes.Buffer{}
 	buf.Write(s.BlockCount.Encode())
 	buf.Write(s.BitsPerBlock.Encode())
-	buf.Write(s.Palette.Encode())
+	if s.BitsPerBlock < 9 {
+		buf.Write(s.Palette.Encode())
+	}
 	buf.Write(s.DataArrayLength.Encode())
 	for _, v := range s.DataArray {
 		buf.Write(v.Encode())
