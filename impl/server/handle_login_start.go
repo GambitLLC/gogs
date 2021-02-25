@@ -61,7 +61,7 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 			ChunkZ: 0,
 		}.CreatePacket().Encode())
 
-		buf.Write(s.chunkDataPackets())
+		buf.Write(s.chunkDataPackets(player))
 
 		buf.Write(clientbound.SpawnPosition{Location: pk.Position{
 			X: 0,
@@ -220,7 +220,7 @@ func (s *Server) joinGamePacket(player *game.Player) pk.Packet {
 	}.CreatePacket()
 }
 
-func (s *Server) chunkDataPackets() []byte {
+func (s *Server) chunkDataPackets(player *game.Player) []byte {
 	// TODO: get chunks & biomes from server & based on player position
 	buf := bytes.Buffer{}
 
@@ -239,10 +239,13 @@ func (s *Server) chunkDataPackets() []byte {
 		}
 	*/
 
+	chunkX := int(player.Position().X / 16)
+	chunkZ := int(player.Position().Z / 16)
+
 	for x := 0; x < 6; x++ {
 		for z := 0; z < 6; z++ {
 
-			column, _ := s.world.GetChunk(z, x)
+			column, _ := s.world.GetChunk(z+chunkZ, x+chunkX)
 
 			chunkDataArray := make(clientbound.ChunkDataArray, len(column.Level.Sections))
 			bitMask := 0
@@ -252,7 +255,7 @@ func (s *Server) chunkDataPackets() []byte {
 				if bitsPerBlock < 4 {
 					bitsPerBlock = 4
 				}
-				bitMask |= 1 << i
+				bitMask |= 1 << section.Y
 				blockData := make([]pk.Long, len(section.BlockStates))
 				palette := make([]pk.VarInt, len(section.Palette))
 
@@ -276,8 +279,8 @@ func (s *Server) chunkDataPackets() []byte {
 			}
 
 			chunk := clientbound.ChunkData{
-				ChunkX:         pk.Int(x),
-				ChunkZ:         pk.Int(z),
+				ChunkX:         pk.Int(x + chunkX),
+				ChunkZ:         pk.Int(z + chunkZ),
 				FullChunk:      true,
 				PrimaryBitMask: pk.VarInt(bitMask),
 				Heightmaps: pk.NBT{

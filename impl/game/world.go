@@ -157,6 +157,10 @@ type World struct {
 }
 
 func (w *World) GetChunk(x int, z int) (*Column, error) {
+	if x < 0 || z < 0 {
+		return nil, nil
+	}
+
 	if w.columnMap == nil {
 		w.columnMap = make(map[int]map[int]*Column)
 	}
