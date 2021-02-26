@@ -242,39 +242,53 @@ func (s *Server) chunkDataPackets(player *game.Player) []byte {
 	chunkX := int(player.Position().X / 16)
 	chunkZ := int(player.Position().Z / 16)
 
-	for x := 0; x < 6; x++ {
-		for z := 0; z < 6; z++ {
+	for x := -6; x < 7; x++ {
+		for z := -6; z < 7; z++ {
 
 			column, _ := s.world.GetChunk(z+chunkZ, x+chunkX)
 
-			chunkDataArray := make(clientbound.ChunkDataArray, len(column.Level.Sections))
+			var chunkDataArray clientbound.ChunkDataArray
 			bitMask := 0
-
-			for i, section := range column.Level.Sections {
-				bitsPerBlock := int64(math.Ceil(math.Log2(float64(len(section.Palette)))))
-				if bitsPerBlock < 4 {
-					bitsPerBlock = 4
-				}
-				bitMask |= 1 << section.Y
-				blockData := make([]pk.Long, len(section.BlockStates))
-				palette := make([]pk.VarInt, len(section.Palette))
-
-				for i, block := range section.Palette {
-					palette[i] = pk.VarInt(data.ParseBlockId(block.Name))
-				}
-
-				for i, blockState := range section.BlockStates {
-					blockData[i] = pk.Long(blockState)
-				}
-				chunkDataArray[i] = clientbound.ChunkSection{
+			if column == nil {
+				chunkDataArray = make(clientbound.ChunkDataArray, 1)
+				chunkDataArray[0] = clientbound.ChunkSection{
 					BlockCount:   4096,
-					BitsPerBlock: pk.UByte(bitsPerBlock),
+					BitsPerBlock: 4,
 					Palette: clientbound.ChunkPalette{
-						Length:  pk.VarInt(len(palette)),
-						Palette: palette,
+						Length:  1,
+						Palette: []pk.VarInt{0},
 					},
-					DataArrayLength: pk.VarInt(len(blockData)),
-					DataArray:       blockData,
+					DataArrayLength: 256,
+					DataArray:       make([]pk.Long, 256),
+				}
+			} else {
+				chunkDataArray = make(clientbound.ChunkDataArray, len(column.Level.Sections))
+				for i, section := range column.Level.Sections {
+					bitsPerBlock := int64(math.Ceil(math.Log2(float64(len(section.Palette)))))
+					if bitsPerBlock < 4 {
+						bitsPerBlock = 4
+					}
+					bitMask |= 1 << section.Y
+					blockData := make([]pk.Long, len(section.BlockStates))
+					palette := make([]pk.VarInt, len(section.Palette))
+
+					for i, block := range section.Palette {
+						palette[i] = pk.VarInt(data.ParseBlockId(block.Name))
+					}
+
+					for i, blockState := range section.BlockStates {
+						blockData[i] = pk.Long(blockState)
+					}
+					chunkDataArray[i] = clientbound.ChunkSection{
+						BlockCount:   4096,
+						BitsPerBlock: pk.UByte(bitsPerBlock),
+						Palette: clientbound.ChunkPalette{
+							Length:  pk.VarInt(len(palette)),
+							Palette: palette,
+						},
+						DataArrayLength: pk.VarInt(len(blockData)),
+						DataArray:       blockData,
+					}
 				}
 			}
 
