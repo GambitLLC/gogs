@@ -1,39 +1,47 @@
 package game
 
 import (
+	"fmt"
 	"github.com/Tnze/go-mc/save/region"
 )
 
 type World struct {
-	columnMap map[int]map[int]*Column
+	columnMap map[int]map[int]*anvilColumn
 }
 
-func (w *World) GetChunk(x int, z int) (*Column, error) {
-	if x < 0 || z < 0 {
-		return nil, nil
-	}
-
+func (w *World) GetChunk(x int, z int) (*anvilColumn, error) {
 	if w.columnMap == nil {
-		w.columnMap = make(map[int]map[int]*Column)
+		w.columnMap = make(map[int]map[int]*anvilColumn)
 	}
 
 	if w.columnMap[x] == nil {
-		w.columnMap[x] = make(map[int]*Column)
+		w.columnMap[x] = make(map[int]*anvilColumn)
 	}
 
 	if w.columnMap[x][z] == nil {
-		r, err := region.Open("./test_world/region/r.0.0.mca")
+		regionX := x >> 5
+		regionZ := z >> 5
+		r, err := region.Open(fmt.Sprintf("./test_world/region/r.%d.%d.mca", regionX, regionZ))
 		if err != nil {
 			return nil, err
 		}
 		defer r.Close()
 
-		data, err := r.ReadSector(x, z)
+		sectorX := x % 32
+		if sectorX < 0 {
+			sectorX += 32
+		}
+		sectorZ := z % 32
+		if sectorZ < 0 {
+			sectorZ += 32
+		}
+
+		data, err := r.ReadSector(sectorZ, sectorX)
 		if err != nil {
 			return nil, err
 		}
 
-		var c Column
+		var c anvilColumn
 		err = c.Load(data)
 		if err != nil {
 			return nil, err

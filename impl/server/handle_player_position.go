@@ -55,7 +55,7 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 		// TODO: optimize: just load the new chunks in the distance instead of sending all chunks nearby
 		for x := -6; x < 6; x++ {
 			for z := -6; z < 6; z++ {
-				column, _ := s.world.GetChunk(z+chunkZ, x+chunkX)
+				column, _ := s.world.GetChunk(x+chunkX, z+chunkZ)
 
 				if column == nil {
 					chunkDataArray := clientbound.ChunkDataArray{
@@ -90,10 +90,10 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 					}.CreatePacket().Encode()
 					buf.Write(chunk)
 				} else {
-					chunkDataArray := make(clientbound.ChunkDataArray, len(column.Level.Sections))
+					chunkDataArray := make(clientbound.ChunkDataArray, len(column.Level.Sections)-1)
 					bitMask := 0
 
-					for i, section := range column.Level.Sections {
+					for i, section := range column.Level.Sections[1:] {
 						bitsPerBlock := int64(math.Ceil(math.Log2(float64(len(section.Palette)))))
 						if bitsPerBlock < 4 {
 							bitsPerBlock = 4

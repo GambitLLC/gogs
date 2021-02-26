@@ -106,7 +106,7 @@ func sectorLoc(offset int32) (o, s int32) {
 	return offset >> 8, offset & 0xFF
 }
 
-// ReadSector find and read the Chunk data from region
+// ReadSector find and read the anvilChunkSection data from region
 func (r *Region) ReadSector(x, y int) (data []byte, err error) {
 	offset, _ := sectorLoc(r.offsets[x][y])
 
@@ -131,7 +131,7 @@ func (r *Region) ReadSector(x, y int) (data []byte, err error) {
 	return
 }
 
-// WriteSector write Chunk data into region file
+// WriteSector write anvilChunkSection data into region file
 func (r *Region) WriteSector(x, y int, data []byte) error {
 	need := int32(len(data)+4)/4096 + 1
 	n, now := sectorLoc(r.offsets[x][y])

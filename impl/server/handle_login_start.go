@@ -245,7 +245,7 @@ func (s *Server) chunkDataPackets(player *game.Player) []byte {
 	for x := -6; x < 7; x++ {
 		for z := -6; z < 7; z++ {
 
-			column, _ := s.world.GetChunk(z+chunkZ, x+chunkX)
+			column, _ := s.world.GetChunk(x+chunkX, z+chunkZ)
 
 			var chunkDataArray clientbound.ChunkDataArray
 			bitMask := 0
@@ -262,8 +262,8 @@ func (s *Server) chunkDataPackets(player *game.Player) []byte {
 					DataArray:       make([]pk.Long, 256),
 				}
 			} else {
-				chunkDataArray = make(clientbound.ChunkDataArray, len(column.Level.Sections))
-				for i, section := range column.Level.Sections {
+				chunkDataArray = make(clientbound.ChunkDataArray, len(column.Level.Sections)-1)
+				for i, section := range column.Level.Sections[1:] {
 					bitsPerBlock := int64(math.Ceil(math.Log2(float64(len(section.Palette)))))
 					if bitsPerBlock < 4 {
 						bitsPerBlock = 4

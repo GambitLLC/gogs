@@ -9,8 +9,8 @@ import (
 	"io"
 )
 
-// Column is 16* chunk
-type Column struct {
+// anvilColumn is [16]anvilChunkSection
+type anvilColumn struct {
 	DataVersion int
 	Level       struct {
 		Heightmaps map[string][]int64
@@ -23,7 +23,7 @@ type Column struct {
 		// Entities
 		// LiquidTicks
 		// PostProcessing
-		Sections []Chunk
+		Sections []anvilChunkSection
 		// TileEntities
 		// TileTicks
 		InhabitedTime int64
@@ -36,21 +36,21 @@ type Column struct {
 	}
 }
 
-type Chunk struct {
-	Palette     []Block
+type anvilChunkSection struct {
+	Palette     []anvilBlock
 	Y           byte
 	BlockLight  []byte
 	BlockStates []int64
 	SkyLight    []byte
 }
 
-type Block struct {
+type anvilBlock struct {
 	Name       string
 	Properties map[string]interface{}
 }
 
 // Load read column data from []byte
-func (c *Column) Load(data []byte) (err error) {
+func (c *anvilColumn) Load(data []byte) (err error) {
 	var r io.Reader = bytes.NewReader(data[1:])
 
 	switch data[0] {

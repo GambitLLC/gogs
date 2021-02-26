@@ -19,9 +19,9 @@ type Player struct {
 
 func NewPlayer(name string, u uuid.UUID, c gnet.Conn, entityID int32) *Player {
 	spawnPos := data.Position{
-		X: 69,
-		Y: 43,
-		Z: 162,
+		X: 0,
+		Y: 110,
+		Z: 0,
 	}
 	return &Player{
 		entityID: entityID,
