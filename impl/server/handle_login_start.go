@@ -239,8 +239,8 @@ func (s *Server) chunkDataPackets(player *game.Player) []byte {
 		}
 	*/
 
-	chunkX := int(player.Position().X / 16)
-	chunkZ := int(player.Position().Z / 16)
+	chunkX := int(player.Position().X) >> 4
+	chunkZ := int(player.Position().Z) >> 4
 
 	for x := -6; x < 7; x++ {
 		for z := -6; z < 7; z++ {

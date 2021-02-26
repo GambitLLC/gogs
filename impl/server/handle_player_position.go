@@ -35,9 +35,9 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 
 	// TODO: according to wikivg, update view position is sent on change in Y coord as well
 	// if chunk border was crossed, update view pos and send new chunks
-	chunkX := int(in.X) / 16
-	chunkZ := int(in.Z) / 16
-	if int(pos.X)/16 != chunkX || int(pos.Z)/16 != chunkZ {
+	chunkX := int(in.X) >> 4
+	chunkZ := int(in.Z) >> 4
+	if int(pos.X)>>4 != chunkX || int(pos.Z)>>4 != chunkZ {
 		buf := bytes.Buffer{}
 		buf.Write(clientbound.UpdateViewPosition{
 			ChunkX: pk.VarInt(chunkX),
