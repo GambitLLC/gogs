@@ -103,7 +103,7 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 						palette := make([]pk.VarInt, len(section.Palette))
 
 						for i, block := range section.Palette {
-							palette[i] = pk.VarInt(dataGen.ParseBlockId(block.Name))
+							palette[i] = pk.VarInt(dataGen.ParseBlockId(block.Name, block.Properties))
 						}
 
 						for i, blockState := range section.BlockStates {

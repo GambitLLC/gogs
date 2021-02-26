@@ -273,7 +273,7 @@ func (s *Server) chunkDataPackets(player *game.Player) []byte {
 					palette := make([]pk.VarInt, len(section.Palette))
 
 					for i, block := range section.Palette {
-						palette[i] = pk.VarInt(data.ParseBlockId(block.Name))
+						palette[i] = pk.VarInt(data.ParseBlockId(block.Name, block.Properties))
 					}
 
 					for i, blockState := range section.BlockStates {
