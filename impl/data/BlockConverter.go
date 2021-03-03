@@ -7,9 +7,9 @@ import (
 )
 
 var blocksMap map[string]map[string]interface{}
-var idMap = make(map[string]map[string]int64)
+var idMap = make(map[string]map[string]int32)
 
-func ParseBlockId(name string, properties map[string]interface{}) int64 {
+func ParseBlockId(name string, properties map[string]interface{}) int32 {
 	if blocksMap == nil {
 		blocksMap = make(map[string]map[string]interface{})
 		// Open our jsonFile
@@ -21,7 +21,7 @@ func ParseBlockId(name string, properties map[string]interface{}) int64 {
 	}
 
 	if idMap[name] == nil {
-		idMap[name] = make(map[string]int64)
+		idMap[name] = make(map[string]int32)
 	}
 
 	obj, _ := json.Marshal(properties)
@@ -40,7 +40,7 @@ func ParseBlockId(name string, properties map[string]interface{}) int64 {
 			}
 		}
 
-		id := int64(block["states"].([]interface{})[index].(map[string]interface{})["id"].(float64))
+		id := int32(block["states"].([]interface{})[index].(map[string]interface{})["id"].(float64))
 		idMap[name][string(obj)] = id
 		return id
 	}

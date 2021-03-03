@@ -6,13 +6,11 @@ import (
 	"github.com/panjf2000/gnet"
 	"gogs/api/events"
 	api "gogs/api/game"
-	"gogs/impl/data"
 	"gogs/impl/game"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/packetids"
-	"math"
 )
 
 func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
@@ -229,66 +227,38 @@ func (s *Server) chunkDataPackets(player *game.Player) []byte {
 		biomes[i] = 1
 	}
 
-	//blockData.Set(0, 1)
-	/*
-		for _, v := range blockData.Data {
-			if v == 0 {
-				break
-			}
-			log.Printf("%064b", uint64(v))
-		}
-	*/
-
 	chunkX := int(player.Position().X) >> 4
 	chunkZ := int(player.Position().Z) >> 4
 
 	for x := -6; x < 7; x++ {
 		for z := -6; z < 7; z++ {
-
-			column, _ := s.world.GetChunk(x+chunkX, z+chunkZ)
+			column := s.world.GetColumn(x+chunkX, z+chunkZ)
 
 			var chunkDataArray clientbound.ChunkDataArray
+			chunkDataArray = make(clientbound.ChunkDataArray, len(column.Sections))
+
 			bitMask := 0
-			if column == nil {
-				chunkDataArray = make(clientbound.ChunkDataArray, 1)
-				chunkDataArray[0] = clientbound.ChunkSection{
-					BlockCount:   4096,
-					BitsPerBlock: 4,
-					Palette: clientbound.ChunkPalette{
-						Length:  1,
-						Palette: []pk.VarInt{0},
-					},
-					DataArrayLength: 256,
-					DataArray:       make([]pk.Long, 256),
+			for i, section := range column.Sections {
+				bitMask |= 1 << section.Y
+
+				palette := make([]pk.VarInt, len(section.Palette))
+				for i, blockID := range section.Palette {
+					palette[i] = pk.VarInt(blockID)
 				}
-			} else {
-				chunkDataArray = make(clientbound.ChunkDataArray, len(column.Level.Sections)-1)
-				for i, section := range column.Level.Sections[1:] {
-					bitsPerBlock := int64(math.Ceil(math.Log2(float64(len(section.Palette)))))
-					if bitsPerBlock < 4 {
-						bitsPerBlock = 4
-					}
-					bitMask |= 1 << section.Y
-					blockData := make([]pk.Long, len(section.BlockStates))
-					palette := make([]pk.VarInt, len(section.Palette))
 
-					for i, block := range section.Palette {
-						palette[i] = pk.VarInt(data.ParseBlockId(block.Name, block.Properties))
-					}
-
-					for i, blockState := range section.BlockStates {
-						blockData[i] = pk.Long(blockState)
-					}
-					chunkDataArray[i] = clientbound.ChunkSection{
-						BlockCount:   4096,
-						BitsPerBlock: pk.UByte(bitsPerBlock),
-						Palette: clientbound.ChunkPalette{
-							Length:  pk.VarInt(len(palette)),
-							Palette: palette,
-						},
-						DataArrayLength: pk.VarInt(len(blockData)),
-						DataArray:       blockData,
-					}
+				blockData := make([]pk.Long, len(section.BlockStates.Data))
+				for i, blockState := range section.BlockStates.Data {
+					blockData[i] = pk.Long(blockState)
+				}
+				chunkDataArray[i] = clientbound.ChunkSection{
+					BlockCount:   4096,
+					BitsPerBlock: pk.UByte(section.BlockStates.BitsPerValue),
+					Palette: clientbound.ChunkPalette{
+						Length:  pk.VarInt(len(palette)),
+						Palette: palette,
+					},
+					DataArrayLength: pk.VarInt(len(blockData)),
+					DataArray:       blockData,
 				}
 			}
 

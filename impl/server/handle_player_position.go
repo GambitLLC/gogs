@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"github.com/panjf2000/gnet"
 	"gogs/api/data"
-	dataGen "gogs/impl/data"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
-	"math"
 )
 
 func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
@@ -34,6 +32,7 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 	pos := player.Position()
 
 	// TODO: according to wikivg, update view position is sent on change in Y coord as well
+	// TODO: update in player position rotation as well (change where this logic occurs ...)
 	// if chunk border was crossed, update view pos and send new chunks
 	chunkX := int(in.X) >> 4
 	chunkZ := int(in.Z) >> 4
@@ -53,94 +52,57 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 
 		// TODO: change chunks sent to be based on client side render distance
 		// TODO: optimize: just load the new chunks in the distance instead of sending all chunks nearby
-		for x := -6; x < 6; x++ {
-			for z := -6; z < 6; z++ {
-				column, _ := s.world.GetChunk(x+chunkX, z+chunkZ)
+		for x := -6; x < 7; x++ {
+			for z := -6; z < 7; z++ {
+				column := s.world.GetColumn(x+chunkX, z+chunkZ)
 
-				if column == nil {
-					chunkDataArray := clientbound.ChunkDataArray{
-						clientbound.ChunkSection{
-							BlockCount:   0,
-							BitsPerBlock: 4,
-							Palette: clientbound.ChunkPalette{
-								Length:  1,
-								Palette: []pk.VarInt{0},
-							},
-							DataArrayLength: pk.VarInt(256),
-							DataArray:       make([]pk.Long, 256),
-						},
-					}
-					chunk := clientbound.ChunkData{
-						ChunkX:         pk.Int(chunkX + x),
-						ChunkZ:         pk.Int(chunkZ + z),
-						FullChunk:      true,
-						PrimaryBitMask: 1,
-						Heightmaps: pk.NBT{
-							V: clientbound.Heightmap{
-								MotionBlocking: make([]int64, 37),
-								WorldSurface:   make([]int64, 37),
-							},
-						},
-						BiomesLength:     1024,
-						Biomes:           biomes,
-						Size:             pk.VarInt(len(chunkDataArray.Encode())),
-						Data:             chunkDataArray,
-						NumBlockEntities: 0,
-						BlockEntities:    nil,
-					}.CreatePacket().Encode()
-					buf.Write(chunk)
-				} else {
-					chunkDataArray := make(clientbound.ChunkDataArray, len(column.Level.Sections)-1)
-					bitMask := 0
+				var chunkDataArray clientbound.ChunkDataArray
+				chunkDataArray = make(clientbound.ChunkDataArray, len(column.Sections))
 
-					for i, section := range column.Level.Sections[1:] {
-						bitsPerBlock := int64(math.Ceil(math.Log2(float64(len(section.Palette)))))
-						if bitsPerBlock < 4 {
-							bitsPerBlock = 4
-						}
-						bitMask |= 1 << section.Y
-						blockData := make([]pk.Long, len(section.BlockStates))
-						palette := make([]pk.VarInt, len(section.Palette))
+				bitMask := 0
+				for i, section := range column.Sections {
+					bitMask |= 1 << section.Y
 
-						for i, block := range section.Palette {
-							palette[i] = pk.VarInt(dataGen.ParseBlockId(block.Name, block.Properties))
-						}
-
-						for i, blockState := range section.BlockStates {
-							blockData[i] = pk.Long(blockState)
-						}
-						chunkDataArray[i] = clientbound.ChunkSection{
-							BlockCount:   4096,
-							BitsPerBlock: pk.UByte(bitsPerBlock),
-							Palette: clientbound.ChunkPalette{
-								Length:  pk.VarInt(len(palette)),
-								Palette: palette,
-							},
-							DataArrayLength: pk.VarInt(len(blockData)),
-							DataArray:       blockData,
-						}
+					palette := make([]pk.VarInt, len(section.Palette))
+					for i, blockID := range section.Palette {
+						palette[i] = pk.VarInt(blockID)
 					}
 
-					chunk := clientbound.ChunkData{
-						ChunkX:         pk.Int(x + chunkX),
-						ChunkZ:         pk.Int(z + chunkZ),
-						FullChunk:      true,
-						PrimaryBitMask: pk.VarInt(bitMask),
-						Heightmaps: pk.NBT{
-							V: clientbound.Heightmap{
-								MotionBlocking: make([]int64, 37),
-								WorldSurface:   make([]int64, 37),
-							},
+					blockData := make([]pk.Long, len(section.BlockStates.Data))
+					for i, blockState := range section.BlockStates.Data {
+						blockData[i] = pk.Long(blockState)
+					}
+					chunkDataArray[i] = clientbound.ChunkSection{
+						BlockCount:   4096,
+						BitsPerBlock: pk.UByte(section.BlockStates.BitsPerValue),
+						Palette: clientbound.ChunkPalette{
+							Length:  pk.VarInt(len(palette)),
+							Palette: palette,
 						},
-						BiomesLength:     1024,
-						Biomes:           biomes,
-						Size:             pk.VarInt(len(chunkDataArray.Encode())),
-						Data:             chunkDataArray,
-						NumBlockEntities: 0,
-						BlockEntities:    nil,
-					}.CreatePacket().Encode()
-					buf.Write(chunk)
+						DataArrayLength: pk.VarInt(len(blockData)),
+						DataArray:       blockData,
+					}
 				}
+
+				chunk := clientbound.ChunkData{
+					ChunkX:         pk.Int(x + chunkX),
+					ChunkZ:         pk.Int(z + chunkZ),
+					FullChunk:      true,
+					PrimaryBitMask: pk.VarInt(bitMask),
+					Heightmaps: pk.NBT{
+						V: clientbound.Heightmap{
+							MotionBlocking: make([]int64, 37),
+							WorldSurface:   make([]int64, 37),
+						},
+					},
+					BiomesLength:     1024,
+					Biomes:           biomes,
+					Size:             pk.VarInt(len(chunkDataArray.Encode())),
+					Data:             chunkDataArray,
+					NumBlockEntities: 0,
+					BlockEntities:    nil,
+				}.CreatePacket().Encode()
+				buf.Write(chunk)
 			}
 		}
 
