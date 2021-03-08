@@ -13,7 +13,28 @@ import (
 type column struct {
 	X        int
 	Z        int
-	Sections []chunkSection
+	Sections [16]*chunkSection
+}
+
+func (c *column) SetBlock(x int, y int, z int, blockID int32) {
+	sectionY := y >> 4
+	if c.Sections[sectionY] == nil {
+		c.Sections[sectionY] = &chunkSection{
+			Y:           byte(sectionY),
+			Palette:     make([]int32, 1, 16),
+			BlockStates: newCompactedDataArray(4, 4096),
+		}
+	}
+	sectionX := x % 16
+	if sectionX < 0 {
+		sectionX += 16
+	}
+	sectionZ := z % 16
+	if sectionZ < 0 {
+		sectionZ += 16
+	}
+
+	c.Sections[sectionY].SetBlock(sectionX, y%16, sectionZ, blockID)
 }
 
 type chunkSection struct {
@@ -21,6 +42,23 @@ type chunkSection struct {
 	Palette     []int32
 	BlockStates compactedDataArray
 	paletteMap  map[int32]uint8 // map of global palette id to palette index
+}
+
+func (s *chunkSection) SetBlock(x int, y int, z int, blockID int32) {
+	if s.paletteMap == nil {
+		s.paletteMap = make(map[int32]uint8, 16)
+	}
+
+	// update the palette if needed
+	paletteIndex, exists := s.paletteMap[blockID]
+	if !exists {
+		paletteIndex = uint8(len(s.Palette))
+		s.paletteMap[blockID] = paletteIndex
+		s.Palette = append(s.Palette, blockID)
+		// TODO: change BlockStates BitsPerValue if palette size increases too much
+	}
+
+	s.BlockStates.set(256*y+16*z+x, int64(paletteIndex))
 }
 
 type compactedDataArray struct {

@@ -230,15 +230,19 @@ func (s *Server) chunkDataPackets(player *game.Player) []byte {
 	chunkX := int(player.Position().X) >> 4
 	chunkZ := int(player.Position().Z) >> 4
 
+	// TODO: change chunks sent to be based on client side render distance
 	for x := -6; x < 7; x++ {
 		for z := -6; z < 7; z++ {
 			column := s.world.GetColumn(x+chunkX, z+chunkZ)
 
 			var chunkDataArray clientbound.ChunkDataArray
-			chunkDataArray = make(clientbound.ChunkDataArray, len(column.Sections))
+			chunkDataArray = make(clientbound.ChunkDataArray, 0, 16)
 
 			bitMask := 0
-			for i, section := range column.Sections {
+			for _, section := range column.Sections {
+				if section == nil {
+					continue
+				}
 				bitMask |= 1 << section.Y
 
 				palette := make([]pk.VarInt, len(section.Palette))
@@ -250,7 +254,7 @@ func (s *Server) chunkDataPackets(player *game.Player) []byte {
 				for i, blockState := range section.BlockStates.Data {
 					blockData[i] = pk.Long(blockState)
 				}
-				chunkDataArray[i] = clientbound.ChunkSection{
+				chunkDataArray = append(chunkDataArray, clientbound.ChunkSection{
 					BlockCount:   4096,
 					BitsPerBlock: pk.UByte(section.BlockStates.BitsPerValue),
 					Palette: clientbound.ChunkPalette{
@@ -259,7 +263,7 @@ func (s *Server) chunkDataPackets(player *game.Player) []byte {
 					},
 					DataArrayLength: pk.VarInt(len(blockData)),
 					DataArray:       blockData,
-				}
+				})
 			}
 
 			chunk := clientbound.ChunkData{

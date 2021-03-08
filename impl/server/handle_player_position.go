@@ -44,67 +44,8 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 		}.CreatePacket().Encode())
 
 		// TODO: Add unload chunks for chunks out of range? not sure if needed
-
-		biomes := make([]pk.VarInt, 1024, 1024)
-		for i := range biomes {
-			biomes[i] = 1
-		}
-
-		// TODO: change chunks sent to be based on client side render distance
 		// TODO: optimize: just load the new chunks in the distance instead of sending all chunks nearby
-		for x := -6; x < 7; x++ {
-			for z := -6; z < 7; z++ {
-				column := s.world.GetColumn(x+chunkX, z+chunkZ)
-
-				var chunkDataArray clientbound.ChunkDataArray
-				chunkDataArray = make(clientbound.ChunkDataArray, len(column.Sections))
-
-				bitMask := 0
-				for i, section := range column.Sections {
-					bitMask |= 1 << section.Y
-
-					palette := make([]pk.VarInt, len(section.Palette))
-					for i, blockID := range section.Palette {
-						palette[i] = pk.VarInt(blockID)
-					}
-
-					blockData := make([]pk.Long, len(section.BlockStates.Data))
-					for i, blockState := range section.BlockStates.Data {
-						blockData[i] = pk.Long(blockState)
-					}
-					chunkDataArray[i] = clientbound.ChunkSection{
-						BlockCount:   4096,
-						BitsPerBlock: pk.UByte(section.BlockStates.BitsPerValue),
-						Palette: clientbound.ChunkPalette{
-							Length:  pk.VarInt(len(palette)),
-							Palette: palette,
-						},
-						DataArrayLength: pk.VarInt(len(blockData)),
-						DataArray:       blockData,
-					}
-				}
-
-				chunk := clientbound.ChunkData{
-					ChunkX:         pk.Int(x + chunkX),
-					ChunkZ:         pk.Int(z + chunkZ),
-					FullChunk:      true,
-					PrimaryBitMask: pk.VarInt(bitMask),
-					Heightmaps: pk.NBT{
-						V: clientbound.Heightmap{
-							MotionBlocking: make([]int64, 37),
-							WorldSurface:   make([]int64, 37),
-						},
-					},
-					BiomesLength:     1024,
-					Biomes:           biomes,
-					Size:             pk.VarInt(len(chunkDataArray.Encode())),
-					Data:             chunkDataArray,
-					NumBlockEntities: 0,
-					BlockEntities:    nil,
-				}.CreatePacket().Encode()
-				buf.Write(chunk)
-			}
-		}
+		buf.Write(s.chunkDataPackets(player))
 
 		out = buf.Bytes()
 	}

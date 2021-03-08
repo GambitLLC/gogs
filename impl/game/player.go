@@ -20,7 +20,7 @@ type Player struct {
 func NewPlayer(name string, u uuid.UUID, c gnet.Conn, entityID int32) *Player {
 	spawnPos := data.Position{
 		X: 0,
-		Y: 110,
+		Y: 90,
 		Z: 0,
 	}
 	return &Player{

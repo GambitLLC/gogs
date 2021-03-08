@@ -309,9 +309,9 @@ func (p *Position) Decode(r Reader) error {
 	}
 
 	v := binary.BigEndian.Uint64(bs)
-	p.X = int32(v >> 38)
+	p.X = int32(int64(v) >> 38)
 	p.Y = int32(v & 0xFFF)
-	p.Z = int32(v << 26 >> 38)
+	p.Z = int32(int64(v) << 26 >> 38)
 	return nil
 }
 

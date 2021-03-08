@@ -12,6 +12,10 @@ type World struct {
 	columnMap      map[int]map[int]*column
 }
 
+func (w *World) SetBlock(x int, y int, z int, blockID int32) {
+	w.GetColumn(x>>16, z>>16).SetBlock(x, y, z, blockID)
+}
+
 func (w *World) GetColumn(x int, z int) *column {
 	if w.columnMap == nil {
 		w.columnMap = make(map[int]map[int]*column)
@@ -25,7 +29,7 @@ func (w *World) GetColumn(x int, z int) *column {
 		val := column{
 			X:        x,
 			Z:        z,
-			Sections: make([]chunkSection, 0, 16),
+			Sections: [16]*chunkSection{},
 		}
 
 		loadedColumn := w.LoadColumn(x, z)
@@ -41,6 +45,7 @@ func (w *World) GetColumn(x int, z int) *column {
 				for i, block := range section.Palette {
 					palette[i] = data.ParseBlockId(block.Name, block.Properties)
 				}
+				// TODO: also create the palette map
 
 				// don't store empty air chunks (anvil file seems to store them)
 				if len(palette) == 1 && palette[0] == 0 {
@@ -58,11 +63,11 @@ func (w *World) GetColumn(x int, z int) *column {
 					blockStates.Data[i] = block
 				}
 
-				val.Sections = append(val.Sections, chunkSection{
+				val.Sections[section.Y] = &chunkSection{
 					Y:           section.Y,
 					Palette:     palette,
 					BlockStates: blockStates,
-				})
+				}
 			}
 		}
 
