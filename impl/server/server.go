@@ -25,10 +25,9 @@ type playerMapping struct {
 type Server struct {
 	gnet.EventServer
 
-	Host        string
-	Port        uint16
-	tickCount   uint64
-	numEntities int32 // TODO: find a better way to implement entity ids?
+	Host      string
+	Port      uint16
+	tickCount uint64
 
 	playerMapMutex sync.RWMutex
 	playerMap      *playerMapping
@@ -95,8 +94,6 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 	player := ecs.Player{
 		BasicEntity:         ecs.NewEntity(),
 		PositionComponent:   spawnPos,
-		VelocityComponent:   ecs.VelocityComponent{},
-		RotationComponent:   ecs.RotationComponent{},
 		HealthComponent:     ecs.HealthComponent{Health: 20},
 		FoodComponent:       ecs.FoodComponent{Food: 20, Saturation: 0},
 		ConnectionComponent: ecs.ConnectionComponent{Connection: conn},
