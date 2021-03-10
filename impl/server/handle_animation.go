@@ -27,7 +27,7 @@ func (s *Server) handleAnimation(conn gnet.Conn, pkt pk.Packet) (out []byte, err
 	}
 
 	entityAnimationPacket := clientbound.EntityAnimation{
-		EntityID:  pk.VarInt(player.EntityID()),
+		EntityID:  pk.VarInt(player.ID()),
 		Animation: pk.UByte(anim),
 	}.CreatePacket()
 

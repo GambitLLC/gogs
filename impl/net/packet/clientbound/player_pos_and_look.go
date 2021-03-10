@@ -1,7 +1,7 @@
 package clientbound
 
 import (
-	"gogs/api/game"
+	"gogs/impl/ecs"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/packetids"
 )
@@ -20,13 +20,11 @@ func (s PlayerPositionAndLook) CreatePacket() pk.Packet {
 	return pk.Marshal(packetids.PlayerPositionAndLookClientbound, s.X, s.Y, s.Z, s.Yaw, s.Pitch, s.Flags, s.TeleportID)
 }
 
-func (s *PlayerPositionAndLook) FromPlayer(p game.Player) *PlayerPositionAndLook {
-	pos := p.Position()
-	rot := p.Rotation()
-	s.X = pk.Double(pos.X)
-	s.Y = pk.Double(pos.Y)
-	s.Z = pk.Double(pos.Z)
-	s.Yaw = pk.Float(rot.Yaw)
-	s.Pitch = pk.Float(rot.Pitch)
+func (s *PlayerPositionAndLook) FromPlayer(p ecs.Player) *PlayerPositionAndLook {
+	s.X = pk.Double(p.X)
+	s.Y = pk.Double(p.Y)
+	s.Z = pk.Double(p.Z)
+	s.Yaw = pk.Float(p.Yaw)
+	s.Pitch = pk.Float(p.Pitch)
 	return s
 }

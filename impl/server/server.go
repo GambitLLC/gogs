@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"fmt"
+	"gogs/impl/ecs"
 	"strconv"
 	"sync"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/panjf2000/gnet"
 	"gogs/api/data/chat"
-	api "gogs/api/game"
 	"gogs/impl/game"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
@@ -18,9 +18,9 @@ import (
 )
 
 type playerMapping struct {
-	uuidToPlayer map[uuid.UUID]*game.Player
+	uuidToPlayer map[uuid.UUID]*ecs.Player
 	uuidToConn   map[uuid.UUID]gnet.Conn
-	connToPlayer map[gnet.Conn]*game.Player
+	connToPlayer map[gnet.Conn]*ecs.Player
 }
 
 type Server struct {
@@ -31,14 +31,15 @@ type Server struct {
 	tickCount   uint64
 	numEntities int32 // TODO: find a better way to implement entity ids?
 
-	mu        sync.RWMutex
-	playerMap *playerMapping
-	world     *game.World
+	playerMapMutex sync.RWMutex
+	playerMap      *playerMapping
+	world          *game.World
 }
 
+/*
 func (s *Server) Players() []api.Player {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.playerMapMutex.RLock()
+	defer s.playerMapMutex.RUnlock()
 
 	players := make([]api.Player, 0, len(s.playerMap.uuidToPlayer))
 	for _, player := range s.playerMap.uuidToPlayer {
@@ -48,11 +49,12 @@ func (s *Server) Players() []api.Player {
 }
 
 func (s *Server) PlayerFromUUID(uuid uuid.UUID) api.Player {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.playerMapMutex.RLock()
+	defer s.playerMapMutex.RUnlock()
 
 	return s.playerMap.uuidToPlayer[uuid]
 }
+*/
 
 func (s *Server) Broadcast(text string) {
 	// TODO: figure out chat colors
@@ -67,9 +69,9 @@ func (s *Server) Broadcast(text string) {
 	s.broadcastPacket(pkt, nil)
 }
 
-func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Player {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Player {
+	s.playerMapMutex.Lock()
+	defer s.playerMapMutex.Unlock()
 
 	//player, exists := s.playerMap.uuidToPlayer[u]
 	//if exists {
@@ -79,59 +81,81 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *game.Pl
 	//	return player
 	//}
 
-	player := game.NewPlayer(name, u, conn, s.numEntities)
-	s.numEntities += 1
-	s.playerMap.uuidToPlayer[u] = player
+	/*
+		player := game.NewPlayer(name, u, conn, s.numEntities)
+		s.numEntities += 1
+		s.playerMap.uuidToPlayer[u] = player
+		s.playerMap.uuidToConn[u] = conn
+		s.playerMap.connToPlayer[conn] = player
+	*/
+	spawnPos := ecs.PositionComponent{
+		X: 0,
+		Y: 90,
+		Z: 0,
+	}
+	player := ecs.Player{
+		BasicEntity:         ecs.NewEntity(),
+		PositionComponent:   spawnPos,
+		VelocityComponent:   ecs.VelocityComponent{},
+		RotationComponent:   ecs.RotationComponent{},
+		HealthComponent:     ecs.HealthComponent{Health: 20},
+		FoodComponent:       ecs.FoodComponent{Food: 20, Saturation: 0},
+		ConnectionComponent: ecs.ConnectionComponent{Connection: conn},
+		SpawnPosition:       spawnPos,
+		UUID:                u,
+		Name:                name,
+	}
+	s.playerMap.uuidToPlayer[u] = &player
 	s.playerMap.uuidToConn[u] = conn
-	s.playerMap.connToPlayer[conn] = player
+	s.playerMap.connToPlayer[conn] = &player
 
-	return player
+	return &player
 }
 
-func (s *Server) playerFromConn(conn gnet.Conn) *game.Player {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+func (s *Server) playerFromConn(conn gnet.Conn) *ecs.Player {
+	s.playerMapMutex.RLock()
+	defer s.playerMapMutex.RUnlock()
 
 	return s.playerMap.connToPlayer[conn]
 }
 
 func (s *Server) connFromUUID(uuid uuid.UUID) gnet.Conn {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.playerMapMutex.RLock()
+	defer s.playerMapMutex.RUnlock()
 
 	return s.playerMap.uuidToConn[uuid]
 }
 
-func (s *Server) playerFromEntityID(id int32) *game.Player {
+func (s *Server) playerFromEntityID(id uint64) *ecs.Player {
 	// todo: consider creating a map
 	// todo: should be getEntity() and not just for players
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.playerMapMutex.RLock()
+	defer s.playerMapMutex.RUnlock()
 
 	for _, p := range s.playerMap.uuidToPlayer {
-		if p.EntityID() == id {
+		if p.ID() == id {
 			return p
 		}
 	}
 	return nil
 }
 
-func (s *Server) broadcastPacket(pkt pk.Packet, conn gnet.Conn) {
+func (s *Server) broadcastPacket(pkt pk.Packet, exception gnet.Conn) {
 	out := pkt.Encode()
-	s.mu.RLock()
+	s.playerMapMutex.RLock()
 	for _, c := range s.playerMap.uuidToConn {
-		if c != conn {
+		if c != exception {
 			_ = c.AsyncWrite(out)
 		}
 	}
-	s.mu.RUnlock()
+	s.playerMapMutex.RUnlock()
 }
 
 func (s *Server) Init() {
 	s.playerMap = &playerMapping{
-		uuidToPlayer: make(map[uuid.UUID]*game.Player),
+		uuidToPlayer: make(map[uuid.UUID]*ecs.Player),
 		uuidToConn:   make(map[uuid.UUID]gnet.Conn),
-		connToPlayer: make(map[gnet.Conn]*game.Player),
+		connToPlayer: make(map[gnet.Conn]*ecs.Player),
 	}
 	// TODO: set up Server initialization (world, etc)
 	s.world = &game.World{}
@@ -164,18 +188,18 @@ func (s *Server) OnClosed(c gnet.Conn, _ error) gnet.Action {
 	logger.Printf("Connection closed")
 
 	//clean up all the player state
-	s.mu.RLock()
+	s.playerMapMutex.RLock()
 	player, exists := s.playerMap.connToPlayer[c]
-	s.mu.RUnlock()
+	s.playerMapMutex.RUnlock()
 
 	if exists {
-		s.mu.Lock()
-		delete(s.playerMap.uuidToConn, player.UUID())
-		delete(s.playerMap.uuidToPlayer, player.UUID())
+		s.playerMapMutex.Lock()
+		delete(s.playerMap.uuidToConn, player.UUID)
+		delete(s.playerMap.uuidToPlayer, player.UUID)
 		delete(s.playerMap.connToPlayer, c)
-		s.mu.Unlock()
+		s.playerMapMutex.Unlock()
 
-		logger.Printf("Player %v disconnected", player.Name())
+		logger.Printf("Player %v disconnected", player.Name)
 
 		// update player info for all remaining players
 		playerInfoPacket := clientbound.PlayerInfo{
@@ -183,24 +207,24 @@ func (s *Server) OnClosed(c gnet.Conn, _ error) gnet.Action {
 			NumPlayers: 1,
 			Players: []pk.Encodable{
 				clientbound.PlayerInfoRemovePlayer{
-					UUID: pk.UUID(player.UUID()),
+					UUID: pk.UUID(player.UUID),
 				},
 			},
 		}.CreatePacket().Encode()
 		// also destroy the entity for all players
 		destroyEntitiesPacket := clientbound.DestroyEntities{
 			Count:     1,
-			EntityIDs: []pk.VarInt{pk.VarInt(player.EntityID())},
+			EntityIDs: []pk.VarInt{pk.VarInt(player.ID())},
 		}.CreatePacket().Encode()
 
-		s.mu.RLock()
+		s.playerMapMutex.RLock()
 		for _, conn := range s.playerMap.uuidToConn {
 			_ = conn.AsyncWrite(append(playerInfoPacket, destroyEntitiesPacket...))
 		}
-		s.mu.RUnlock()
+		s.playerMapMutex.RUnlock()
 
 		// TODO: trigger disconnect event
-		s.Broadcast(fmt.Sprintf("%v has left the game", player.Name()))
+		s.Broadcast(fmt.Sprintf("%v has left the game", player.Name))
 		return gnet.None
 	}
 
@@ -230,8 +254,8 @@ func (s *Server) React(frame []byte, c gnet.Conn) ([]byte, gnet.Action) {
 
 //On tick
 func (s *Server) Tick() (delay time.Duration, action gnet.Action) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.playerMapMutex.RLock()
+	defer s.playerMapMutex.RUnlock()
 
 	startTime := time.Now()
 	// TODO: probably game logic stuff

@@ -18,7 +18,7 @@ func (s *Server) handleEntityAction(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 	switch in.ActionID {
 	case 0: // start sneaking
 		s.broadcastPacket(clientbound.EntityMetadata{
-			EntityID: pk.VarInt(player.EntityID()),
+			EntityID: pk.VarInt(player.ID()),
 			Metadata: []clientbound.MetadataField{
 				{Index: 6, Type: 18, Value: pk.VarInt(5)}, // SNEAKING
 				{Index: 0xFF},
@@ -26,7 +26,7 @@ func (s *Server) handleEntityAction(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 		}.CreatePacket(), conn)
 	case 1: // stop sneaking
 		s.broadcastPacket(clientbound.EntityMetadata{
-			EntityID: pk.VarInt(player.EntityID()),
+			EntityID: pk.VarInt(player.ID()),
 			Metadata: []clientbound.MetadataField{
 				{Index: 6, Type: 18, Value: pk.VarInt(0)}, // STANDING
 				{Index: 0xFF},

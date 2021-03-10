@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"github.com/panjf2000/gnet"
 	"gogs/api/events"
-	api "gogs/api/game"
-	"gogs/impl/game"
+	"gogs/impl/ecs"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
@@ -52,7 +51,7 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 			Recipes:    nil,
 		}.CreatePacket().Encode())
 
-		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(player).CreatePacket().Encode())
+		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
 
 		buf.Write(clientbound.UpdateViewPosition{
 			ChunkX: 0,
@@ -67,18 +66,18 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 			Z: 0,
 		}}.CreatePacket().Encode())
 
-		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(player).CreatePacket().Encode())
+		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
 
 		// send time update with negative time to keep sun in position
 		buf.Write(clientbound.TimeUpdate{WorldAge: 0, TimeOfDay: -6000}.CreatePacket().Encode())
 
-		s.mu.RLock()
+		s.playerMapMutex.RLock()
 		numPlayers := len(s.playerMap.uuidToPlayer)
 		playerInfoArr := make([]pk.Encodable, 0, numPlayers)
 		for _, p := range s.playerMap.uuidToPlayer {
 			playerInfoArr = append(playerInfoArr, clientbound.PlayerInfoAddPlayer{
-				UUID:           pk.UUID(p.UUID()),
-				Name:           pk.String(p.Name()),
+				UUID:           pk.UUID(p.UUID),
+				Name:           pk.String(p.Name),
 				NumProperties:  0,
 				Properties:     nil,
 				Gamemode:       0,
@@ -96,28 +95,30 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 		// also add spawn player packets for players already online
 		// TODO: this logic should be done elsewhere (when players enter range) (tick?)
 		for _, p := range s.playerMap.uuidToPlayer {
-			if p.UUID() != player.UUID() {
+			if p.UUID != player.UUID {
 				buf.Write(clientbound.SpawnPlayer{
-					EntityID:   pk.VarInt(p.EntityID()),
-					PlayerUUID: pk.UUID(p.UUID()),
-					X:          pk.Double(p.Position().X),
-					Y:          pk.Double(p.Position().Y),
-					Z:          pk.Double(p.Position().Z),
-					Yaw:        pk.Angle(p.Rotation().Yaw / 360 * 256),
-					Pitch:      pk.Angle(p.Rotation().Pitch / 360 * 256),
+					EntityID:   pk.VarInt(p.ID()),
+					PlayerUUID: pk.UUID(p.UUID),
+					X:          pk.Double(p.X),
+					Y:          pk.Double(p.Y),
+					Z:          pk.Double(p.Z),
+					Yaw:        pk.Angle(p.Yaw),
+					Pitch:      pk.Angle(p.Pitch),
 				}.CreatePacket().Encode())
 			}
 		}
-		s.mu.RUnlock()
+		s.playerMapMutex.RUnlock()
 
 		out = buf.Bytes()
 
-		event := events.PlayerJoinData{
-			Player:  api.Player(player),
-			Message: fmt.Sprintf("%v has joined the game", player.Name()),
-		}
-		events.PlayerJoinEvent.Trigger(&event)
-		s.Broadcast(event.Message)
+		/*
+			event := events.PlayerJoinData{
+				Player:  api.Player(player),
+				Message: fmt.Sprintf("%v has joined the game", player.Name()),
+			}
+			events.PlayerJoinEvent.Trigger(&event)
+		*/
+		s.Broadcast(fmt.Sprintf("%v has joined the game", player.Name))
 
 		// send out player info to players online
 		playerInfoPacket := clientbound.PlayerInfo{
@@ -125,8 +126,8 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 			NumPlayers: 1,
 			Players: []pk.Encodable{
 				clientbound.PlayerInfoAddPlayer{
-					UUID:           pk.UUID(player.UUID()),
-					Name:           pk.String(player.Name()),
+					UUID:           pk.UUID(player.UUID),
+					Name:           pk.String(player.Name),
 					NumProperties:  0,
 					Properties:     nil,
 					Gamemode:       0,
@@ -138,13 +139,13 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 		}.CreatePacket()
 		// TODO: spawn player should be occurring when players enter range (not join game), do logic elsewhere (tick?)
 		spawnPlayerPacket := clientbound.SpawnPlayer{
-			EntityID:   pk.VarInt(player.EntityID()),
-			PlayerUUID: pk.UUID(player.UUID()),
-			X:          pk.Double(player.Position().X),
-			Y:          pk.Double(player.Position().Y),
-			Z:          pk.Double(player.Position().Z),
-			Yaw:        pk.Angle(player.Rotation().Yaw / 360 * 256),
-			Pitch:      pk.Angle(player.Rotation().Pitch / 360 * 256),
+			EntityID:   pk.VarInt(player.ID()),
+			PlayerUUID: pk.UUID(player.UUID),
+			X:          pk.Double(player.X),
+			Y:          pk.Double(player.Y),
+			Z:          pk.Double(player.Z),
+			Yaw:        pk.Angle(player.Yaw),
+			Pitch:      pk.Angle(player.Pitch),
 		}.CreatePacket()
 
 		s.broadcastPacket(playerInfoPacket, conn)
@@ -163,9 +164,9 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 	return
 }
 
-func (s *Server) joinGamePacket(player *game.Player) pk.Packet {
+func (s *Server) joinGamePacket(player *ecs.Player) pk.Packet {
 	return clientbound.JoinGame{
-		EntityID:     pk.Int(player.EntityID()),
+		EntityID:     pk.Int(player.ID()),
 		IsHardcore:   false,
 		Gamemode:     1, // TODO: fill with player specific details
 		PrevGamemode: 0,
@@ -218,7 +219,7 @@ func (s *Server) joinGamePacket(player *game.Player) pk.Packet {
 	}.CreatePacket()
 }
 
-func (s *Server) chunkDataPackets(player *game.Player) []byte {
+func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
 	// TODO: get chunks & biomes from server & based on player position
 	buf := bytes.Buffer{}
 
@@ -227,8 +228,8 @@ func (s *Server) chunkDataPackets(player *game.Player) []byte {
 		biomes[i] = 1
 	}
 
-	chunkX := int(player.Position().X) >> 4
-	chunkZ := int(player.Position().Z) >> 4
+	chunkX := int(player.X) >> 4
+	chunkZ := int(player.Z) >> 4
 
 	// TODO: change chunks sent to be based on client side render distance
 	for x := -6; x < 7; x++ {

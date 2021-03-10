@@ -17,7 +17,7 @@ func (s *Server) handleClientStatus(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 	case 0: // Perform respawn
 		// send respawn packet?
 		player := s.playerFromConn(conn)
-		*player.Health() = 20
+		player.Health = 20
 		return clientbound.Respawn{
 			Dimension:        pk.NBT{V: clientbound.MinecraftOverworld},
 			WorldName:        "world",
