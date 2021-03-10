@@ -19,7 +19,6 @@ import (
 
 type playerMapping struct {
 	uuidToPlayer map[uuid.UUID]*ecs.Player
-	uuidToConn   map[uuid.UUID]gnet.Conn
 	connToPlayer map[gnet.Conn]*ecs.Player
 }
 
@@ -106,7 +105,6 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 		Name:                name,
 	}
 	s.playerMap.uuidToPlayer[u] = &player
-	s.playerMap.uuidToConn[u] = conn
 	s.playerMap.connToPlayer[conn] = &player
 
 	return &player
@@ -117,13 +115,6 @@ func (s *Server) playerFromConn(conn gnet.Conn) *ecs.Player {
 	defer s.playerMapMutex.RUnlock()
 
 	return s.playerMap.connToPlayer[conn]
-}
-
-func (s *Server) connFromUUID(uuid uuid.UUID) gnet.Conn {
-	s.playerMapMutex.RLock()
-	defer s.playerMapMutex.RUnlock()
-
-	return s.playerMap.uuidToConn[uuid]
 }
 
 func (s *Server) playerFromEntityID(id uint64) *ecs.Player {
@@ -143,9 +134,9 @@ func (s *Server) playerFromEntityID(id uint64) *ecs.Player {
 func (s *Server) broadcastPacket(pkt pk.Packet, exception gnet.Conn) {
 	out := pkt.Encode()
 	s.playerMapMutex.RLock()
-	for _, c := range s.playerMap.uuidToConn {
-		if c != exception {
-			_ = c.AsyncWrite(out)
+	for _, p := range s.playerMap.uuidToPlayer {
+		if p.Connection != exception {
+			_ = p.Connection.AsyncWrite(out)
 		}
 	}
 	s.playerMapMutex.RUnlock()
@@ -154,7 +145,6 @@ func (s *Server) broadcastPacket(pkt pk.Packet, exception gnet.Conn) {
 func (s *Server) Init() {
 	s.playerMap = &playerMapping{
 		uuidToPlayer: make(map[uuid.UUID]*ecs.Player),
-		uuidToConn:   make(map[uuid.UUID]gnet.Conn),
 		connToPlayer: make(map[gnet.Conn]*ecs.Player),
 	}
 	// TODO: set up Server initialization (world, etc)
@@ -194,7 +184,6 @@ func (s *Server) OnClosed(c gnet.Conn, _ error) gnet.Action {
 
 	if exists {
 		s.playerMapMutex.Lock()
-		delete(s.playerMap.uuidToConn, player.UUID)
 		delete(s.playerMap.uuidToPlayer, player.UUID)
 		delete(s.playerMap.connToPlayer, c)
 		s.playerMapMutex.Unlock()
@@ -218,8 +207,8 @@ func (s *Server) OnClosed(c gnet.Conn, _ error) gnet.Action {
 		}.CreatePacket().Encode()
 
 		s.playerMapMutex.RLock()
-		for _, conn := range s.playerMap.uuidToConn {
-			_ = conn.AsyncWrite(append(playerInfoPacket, destroyEntitiesPacket...))
+		for _, p := range s.playerMap.uuidToPlayer {
+			_ = p.Connection.AsyncWrite(append(playerInfoPacket, destroyEntitiesPacket...))
 		}
 		s.playerMapMutex.RUnlock()
 
