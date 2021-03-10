@@ -61,9 +61,9 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 		buf.Write(s.chunkDataPackets(player))
 
 		buf.Write(clientbound.SpawnPosition{Location: pk.Position{
-			X: 0,
-			Y: 2,
-			Z: 0,
+			X: int32(player.SpawnPosition.X),
+			Y: int32(player.SpawnPosition.Y),
+			Z: int32(player.SpawnPosition.Z),
 		}}.CreatePacket().Encode())
 
 		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
