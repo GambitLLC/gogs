@@ -137,35 +137,35 @@ func (s *compactedDataArray) set(index int, val int64) {
 type anvilColumn struct {
 	DataVersion int
 	Level       struct {
-		Heightmaps map[string][]int64
-		Structures struct {
-			References map[string][]int64
-			Starts     map[string]struct {
-				ID string `nbt:"id"`
-			}
-		}
-		// Entities
-		// LiquidTicks
-		// PostProcessing
+		//Heightmaps map[string][]int64
+		//Structures struct {
+		//	References map[string][]int64
+		//	Starts     map[string]struct {
+		//		ID string `nbt:"id"`
+		//	}
+		//}
+		//Entities
+		//LiquidTicks
+		//PostProcessing
 		Sections []anvilChunkSection
-		// TileEntities
-		// TileTicks
-		InhabitedTime int64
-		IsLightOn     byte `nbt:"isLightOn"`
-		LastUpdate    int64
-		Status        string
-		PosX          int32 `nbt:"xPos"`
-		PosZ          int32 `nbt:"zPos"`
-		Biomes        []int32
+		//TileEntities
+		//TileTicks
+		//InhabitedTime int64
+		//IsLightOn     byte `nbt:"isLightOn"`
+		//LastUpdate    int64
+		//Status        string
+		PosX int32 `nbt:"xPos"`
+		PosZ int32 `nbt:"zPos"`
+		//Biomes        []int32
 	}
 }
 
 type anvilChunkSection struct {
-	Palette     []anvilBlock
-	Y           byte
-	BlockLight  []byte
+	Palette []anvilBlock
+	Y       byte
+	//BlockLight  []byte
 	BlockStates []int64
-	SkyLight    []byte
+	//SkyLight    []byte
 }
 
 type anvilBlock struct {
