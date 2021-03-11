@@ -3,11 +3,12 @@ package server
 import (
 	"github.com/panjf2000/gnet"
 	pk "gogs/impl/net/packet"
+	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
 	"math"
 )
 
-func (s *Server) handlePlayerBlockPlacement(_ gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handlePlayerBlockPlacement(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
 	in := serverbound.PlayerBlockPlacement{}
 	if err = in.FromPacket(pkt); err != nil {
 		return
@@ -31,7 +32,23 @@ func (s *Server) handlePlayerBlockPlacement(_ gnet.Conn, pkt pk.Packet) (out []b
 	// TODO: determine block id from player inventory
 	s.world.SetBlock(newX, newY, newZ, 1)
 
-	// TODO: send block change packet to all players
+	out = clientbound.BlockChange{
+		Location: pk.Position{
+			X: int32(newX),
+			Y: int32(newY),
+			Z: int32(newZ),
+		},
+		BlockID: 1,
+	}.CreatePacket().Encode()
+
+	s.playerMapMutex.RLock()
+	for c := range s.playerMap.connToPlayer {
+		// TODO: block change packet should only be sent to players if chunk is loaded
+		if c != conn {
+			_ = c.AsyncWrite(out)
+		}
+	}
+	s.playerMapMutex.RUnlock()
 
 	return
 }
