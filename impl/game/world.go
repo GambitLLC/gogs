@@ -13,7 +13,7 @@ type World struct {
 }
 
 func (w *World) SetBlock(x int, y int, z int, blockID int32) {
-	w.GetColumn(x>>16, z>>16).SetBlock(x, y, z, blockID)
+	w.GetColumn(x>>4, z>>4).SetBlock(x, y, z, blockID)
 }
 
 func (w *World) GetColumn(x int, z int) *column {
