@@ -123,12 +123,7 @@ func (s *Server) handlePlayState(conn gnet.Conn, pkt pk.Packet) (out []byte, err
 	case packetids.ChatMessageServerbound:
 		return s.handleChatMessage(conn, pkt)
 	case packetids.ClientSettings:
-		logger.Printf("Received client settings")
-		// TODO: actually handle client settings
-		s := serverbound.ClientSettings{}
-		if err := s.FromPacket(pkt); err != nil {
-			return nil, err
-		}
+		return s.handleClientSettings(conn, pkt)
 	case packetids.PlayerPosition:
 		// TODO: Handle all player pos & rotation packets
 		return s.handlePlayerPosition(conn, pkt)

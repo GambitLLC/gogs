@@ -231,9 +231,12 @@ func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
 	chunkX := int(player.X) >> 4
 	chunkZ := int(player.Z) >> 4
 
-	// TODO: change chunks sent to be based on client side render distance
-	for x := -6; x < 7; x++ {
-		for z := -6; z < 7; z++ {
+	viewDistance := int(player.ViewDistance)
+	if viewDistance == 0 {
+		viewDistance = 10
+	}
+	for x := -viewDistance; x <= viewDistance; x++ {
+		for z := -viewDistance; z <= viewDistance; z++ {
 			column := s.world.GetColumn(x+chunkX, z+chunkZ)
 
 			var chunkDataArray clientbound.ChunkDataArray

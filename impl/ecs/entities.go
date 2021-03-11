@@ -27,6 +27,7 @@ type Player struct {
 	HealthComponent
 	FoodComponent
 	ConnectionComponent
+	ClientSettingsComponent
 
 	SpawnPosition PositionComponent
 	UUID          uuid.UUID

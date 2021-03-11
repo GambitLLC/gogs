@@ -32,3 +32,8 @@ type ConnectionComponent struct {
 	Connection gnet.Conn
 	Online     bool
 }
+
+type ClientSettingsComponent struct {
+	ViewDistance byte
+	ChatMode     uint8
+}
