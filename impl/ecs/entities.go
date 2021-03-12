@@ -35,6 +35,8 @@ type Player struct {
 	UUID          uuid.UUID
 	Name          string
 
+	GameMode uint8
+
 	HeldSlot pk.Slot // item held on the cursor
 	HeldItem uint8   // hot bar slot which is selected
 }

@@ -95,6 +95,7 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 			Inventory:     make([]pk.Slot, 46),
 		},
 		SpawnPosition: spawnPos,
+		GameMode:      1,
 		UUID:          u,
 		Name:          name,
 	}

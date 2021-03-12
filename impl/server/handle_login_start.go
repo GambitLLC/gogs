@@ -177,8 +177,8 @@ func (s *Server) joinGamePacket(player *ecs.Player) pk.Packet {
 	return clientbound.JoinGame{
 		EntityID:     pk.Int(player.ID()),
 		IsHardcore:   false,
-		Gamemode:     0, // TODO: fill with player specific details
-		PrevGamemode: 0,
+		Gamemode:     pk.UByte(player.GameMode),
+		PrevGamemode: -1,
 		WorldCount:   1,
 		WorldNames:   []pk.Identifier{"world"},
 		DimensionCodec: pk.NBT{
