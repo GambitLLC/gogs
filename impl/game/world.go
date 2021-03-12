@@ -35,8 +35,8 @@ func (w *World) GetColumn(x int, z int) *column {
 		loadedColumn := w.LoadColumn(x, z)
 		if loadedColumn != nil {
 			for _, section := range loadedColumn.Level.Sections {
-				// anvil file contains this invalid, empty section for some reason: skip it
-				if section.Y == 255 {
+				// ignore empty sections
+				if section.Palette == nil {
 					continue
 				}
 
