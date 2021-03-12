@@ -32,8 +32,8 @@ func (s *Server) handlePlayerRotation(conn gnet.Conn, pkt pk.Packet) (out []byte
 	}.CreatePacket()
 	s.broadcastPacket(outPacket, conn)
 
-	player.Yaw = uint8(in.Yaw / 360 * 256)
-	player.Pitch = uint8(in.Pitch / 360 * 256)
+	player.Yaw = float32(in.Yaw)
+	player.Pitch = float32(in.Pitch)
 
 	return
 }

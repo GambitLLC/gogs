@@ -26,6 +26,7 @@ type Player struct {
 	RotationComponent
 	HealthComponent
 	FoodComponent
+	InventoryComponent
 	ConnectionComponent
 	ClientSettingsComponent
 

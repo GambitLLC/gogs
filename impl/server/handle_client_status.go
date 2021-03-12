@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/panjf2000/gnet"
 	pk "gogs/impl/net/packet"
@@ -15,10 +16,11 @@ func (s *Server) handleClientStatus(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 
 	switch actionID {
 	case 0: // Perform respawn
-		// send respawn packet?
 		player := s.playerFromConn(conn)
 		player.Health = 20
-		return clientbound.Respawn{
+		buf := bytes.Buffer{}
+		// send respawn packet
+		buf.Write(clientbound.Respawn{
 			Dimension:        pk.NBT{V: clientbound.MinecraftOverworld},
 			WorldName:        "world",
 			HashedSeed:       0,
@@ -27,7 +29,9 @@ func (s *Server) handleClientStatus(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 			IsDebug:          false,
 			IsFlat:           true,
 			CopyMetadata:     false,
-		}.CreatePacket().Encode(), nil
+		}.CreatePacket().Encode())
+		// TODO: send inventory
+		return buf.Bytes(), nil
 	case 1: // Request stats
 	default:
 		return nil, fmt.Errorf("client status got invalid action id %d", actionID)

@@ -47,7 +47,13 @@ type (
 	Identifier = String
 	VarInt     int32
 	VarLong    int64
-	NBT        struct {
+	Slot       struct {
+		Present   Boolean
+		ItemID    VarInt
+		ItemCount Byte
+		NBT       NBT
+	}
+	NBT struct {
 		V interface{}
 	}
 	Position struct {
@@ -273,6 +279,39 @@ func (v *VarInt) Decode(r Reader) error {
 	}
 
 	*v = VarInt(res)
+	return nil
+}
+
+func (s Slot) Encode() []byte {
+	var bs bytes.Buffer
+
+	bs.Write(s.Present.Encode())
+	if s.Present {
+		bs.Write(s.ItemID.Encode())
+		bs.Write(s.ItemCount.Encode())
+		bs.Write(s.NBT.Encode())
+	}
+
+	return bs.Bytes()
+}
+
+func (s *Slot) Decode(r Reader) error {
+	if err := s.Present.Decode(r); err != nil {
+		return err
+	}
+
+	if s.Present {
+		if err := s.ItemID.Decode(r); err != nil {
+			return err
+		}
+		if err := s.ItemCount.Decode(r); err != nil {
+			return err
+		}
+		if err := s.NBT.Decode(r); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

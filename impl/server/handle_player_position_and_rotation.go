@@ -38,8 +38,8 @@ func (s *Server) handlePlayerPositionAndRotation(conn gnet.Conn, pkt pk.Packet) 
 	player.Y = float64(in.Y)
 	player.Z = float64(in.Z)
 
-	player.Yaw = uint8(in.Yaw / 360 * 256)
-	player.Pitch = uint8(in.Pitch / 360 * 256)
+	player.Yaw = float32(in.Yaw)
+	player.Pitch = float32(in.Pitch)
 
 	return nil, nil
 }

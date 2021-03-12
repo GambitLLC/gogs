@@ -15,8 +15,8 @@ type VelocityComponent struct {
 }
 
 type RotationComponent struct {
-	Pitch uint8 // Rotation angle in steps of 1/256 of a full turn
-	Yaw   uint8 // TODO: consider saving as float64 instead of following packet format...
+	Pitch float32
+	Yaw   float32
 }
 
 type HealthComponent struct {
@@ -26,6 +26,11 @@ type HealthComponent struct {
 type FoodComponent struct {
 	Food       uint8
 	Saturation uint8
+}
+
+type InventoryComponent struct {
+	InventorySize uint8   // number of slots in inventory
+	Inventory     []int32 // array of item ids
 }
 
 type ConnectionComponent struct {
