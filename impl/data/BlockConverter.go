@@ -2,6 +2,7 @@ package data
 
 import (
 	"encoding/json"
+	"gogs/impl/logger"
 	"io/ioutil"
 	"os"
 )
@@ -27,7 +28,11 @@ func ParseBlockId(name string, properties map[string]interface{}) int32 {
 	obj, _ := json.Marshal(properties)
 	val, exists := idMap[name][string(obj)]
 	if !exists {
-		block := blocksMap[name]
+		block, exists := blocksMap[name]
+		if !exists {
+			logger.Printf("block state doesn't exist: %v", name)
+			return 0
+		}
 		index := int64(0)
 		for k, v := range properties {
 			index *= 2
