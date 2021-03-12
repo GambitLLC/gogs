@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"github.com/google/uuid"
+	pk "gogs/impl/net/packet"
 	"sync/atomic"
 )
 
@@ -33,4 +34,7 @@ type Player struct {
 	SpawnPosition PositionComponent
 	UUID          uuid.UUID
 	Name          string
+
+	HeldSlot pk.Slot // item held on the cursor
+	HeldItem uint8   // hot bar slot which is selected
 }

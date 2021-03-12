@@ -307,8 +307,10 @@ func (s *Slot) Decode(r Reader) error {
 		if err := s.ItemCount.Decode(r); err != nil {
 			return err
 		}
-		if err := s.NBT.Decode(r); err != nil {
-			return err
+		if s.NBT.V != nil {
+			if err := s.NBT.Decode(r); err != nil {
+				return err
+			}
 		}
 	}
 

@@ -44,7 +44,9 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 		player := s.createPlayer(string(name), u, conn)
 		buf.Write(s.joinGamePacket(player).Encode())
 
-		buf.Write(clientbound.HeldItemChange{}.CreatePacket().Encode())
+		buf.Write(clientbound.HeldItemChange{
+			Slot: pk.Byte(player.HeldItem),
+		}.CreatePacket().Encode())
 
 		buf.Write(clientbound.DeclareRecipes{
 			NumRecipes: 0,
@@ -67,6 +69,13 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 		}}.CreatePacket().Encode())
 
 		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
+
+		// send inventory
+		buf.Write(clientbound.WindowItems{
+			WindowID: 0,
+			Count:    pk.Short(len(player.Inventory)),
+			SlotData: player.Inventory,
+		}.CreatePacket().Encode())
 
 		// send time update with negative time to keep sun in position
 		buf.Write(clientbound.TimeUpdate{WorldAge: 0, TimeOfDay: -6000}.CreatePacket().Encode())
@@ -168,7 +177,7 @@ func (s *Server) joinGamePacket(player *ecs.Player) pk.Packet {
 	return clientbound.JoinGame{
 		EntityID:     pk.Int(player.ID()),
 		IsHardcore:   false,
-		Gamemode:     1, // TODO: fill with player specific details
+		Gamemode:     0, // TODO: fill with player specific details
 		PrevGamemode: 0,
 		WorldCount:   1,
 		WorldNames:   []pk.Identifier{"world"},

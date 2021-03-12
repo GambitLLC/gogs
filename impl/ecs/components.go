@@ -1,6 +1,9 @@
 package ecs
 
-import "github.com/panjf2000/gnet"
+import (
+	"github.com/panjf2000/gnet"
+	pk "gogs/impl/net/packet"
+)
 
 type PositionComponent struct {
 	X float64
@@ -29,8 +32,8 @@ type FoodComponent struct {
 }
 
 type InventoryComponent struct {
-	InventorySize uint8   // number of slots in inventory
-	Inventory     []int32 // array of item ids
+	InventorySize uint8 // number of slots in inventory
+	Inventory     []pk.Slot
 }
 
 type ConnectionComponent struct {

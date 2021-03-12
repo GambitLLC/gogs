@@ -91,12 +91,20 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 		FoodComponent:       ecs.FoodComponent{Food: 20, Saturation: 0},
 		ConnectionComponent: ecs.ConnectionComponent{Connection: conn},
 		InventoryComponent: ecs.InventoryComponent{
-			InventorySize: 64, // https://wiki.vg/Inventory#Player_Inventory
-			Inventory:     make([]int32, 64),
+			InventorySize: 46, // https://wiki.vg/Inventory#Player_Inventory
+			Inventory:     make([]pk.Slot, 46),
 		},
 		SpawnPosition: spawnPos,
 		UUID:          u,
 		Name:          name,
+	}
+
+	// send a single starting block for now
+	player.Inventory[36] = pk.Slot{
+		Present:   true,
+		ItemID:    1,
+		ItemCount: 1,
+		NBT:       pk.NBT{},
 	}
 	s.playerMap.uuidToPlayer[u] = player
 	s.playerMap.connToPlayer[conn] = player

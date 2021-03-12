@@ -18,7 +18,9 @@ func (s *Server) handleClientStatus(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 	case 0: // Perform respawn
 		player := s.playerFromConn(conn)
 		player.Health = 20
+
 		buf := bytes.Buffer{}
+
 		// send respawn packet
 		buf.Write(clientbound.Respawn{
 			Dimension:        pk.NBT{V: clientbound.MinecraftOverworld},
@@ -30,7 +32,14 @@ func (s *Server) handleClientStatus(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 			IsFlat:           true,
 			CopyMetadata:     false,
 		}.CreatePacket().Encode())
-		// TODO: send inventory
+
+		// send inventory
+		buf.Write(clientbound.WindowItems{
+			WindowID: 0,
+			Count:    pk.Short(len(player.Inventory)),
+			SlotData: player.Inventory,
+		}.CreatePacket().Encode())
+
 		return buf.Bytes(), nil
 	case 1: // Request stats
 	default:
