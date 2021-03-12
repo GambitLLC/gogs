@@ -54,8 +54,8 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
 
 		buf.Write(clientbound.UpdateViewPosition{
-			ChunkX: 0,
-			ChunkZ: 0,
+			ChunkX: pk.VarInt(int32(player.X) >> 4),
+			ChunkZ: pk.VarInt(int32(player.Z) >> 4),
 		}.CreatePacket().Encode())
 
 		buf.Write(s.chunkDataPackets(player))
