@@ -2,11 +2,14 @@ package clientbound
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"gogs/impl/data"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/packetids"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -60,26 +63,19 @@ func VanillaTags() Tags {
 	}
 
 	vanillaTags = Tags{
-		//BlockTags:  getTags("blocks", "minecraft:block"),
-		//ItemTags:   getTags("items", "minecraft:item"),
-		//FluidTags:  getTags("fluids", "minecraft:fluid"),
-		//EntityTags: getTags("entity_types", "minecraft:entity_type"),
-		BlockTags:  getTags("blocks"),
-		ItemTags:   getTags("items"),
-		FluidTags:  getTags("fluids"),
-		EntityTags: getTags("entity_types"),
+		BlockTags:  getTagsArray("blocks", "minecraft:block"),
+		ItemTags:   getTagsArray("items", "minecraft:item"),
+		FluidTags:  getTagsArray("fluids", "minecraft:fluid"),
+		EntityTags: getTagsArray("entity_types", "minecraft:entity_type"),
 	}
 
 	return vanillaTags
 }
 
-// func getTags(tag string, registry string) TagsArray {
-func getTags(tag string) TagsArray {
+func getTagsArray(tag string, registry string) TagsArray {
 	arr := make(TagsArray, 0, 64)
 
-	dir := fmt.Sprintf("./data-generator/generated/data/minecraft/tags/%s", tag)
-
-	files, err := ioutil.ReadDir(dir)
+	files, err := ioutil.ReadDir(fmt.Sprintf("./data-generator/generated/data/minecraft/tags/%s", tag))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -87,32 +83,28 @@ func getTags(tag string) TagsArray {
 		filename := f.Name()
 		filename = strings.TrimSuffix(filename, filepath.Ext(filename))
 
-		/*
-			// TODO: Populate entries using the registry (some tags reference other tags, needs recursion
-			file, _ := os.Open(fmt.Sprintf("%s/%s", dir, f.Name()))
-			byteValue, _ := ioutil.ReadAll(file)
-			valueMap := make(map[string][]string)
-			_ = json.Unmarshal(byteValue, &valueMap)
-
-			entries := make([]pk.VarInt, len(valueMap["values"]))
-			for i, v := range valueMap["values"] {
-				entries[i] = pk.VarInt(data.RegistryID(registry, v))
-			}
-		*/
-
-		if filename == "lava" {
-			arr = append(arr, Tag{
-				TagName: pk.Identifier(filename),
-				Entries: []pk.VarInt{3, 4},
-			})
-		} else {
-			arr = append(arr, Tag{
-				TagName: pk.Identifier(filename),
-				Entries: nil,
-			})
-		}
-
+		arr = append(arr, Tag{
+			TagName: pk.Identifier(filename),
+			Entries: getEntries(tag, registry, filename),
+		})
 	}
 
 	return arr
+}
+
+func getEntries(rootTag string, registry string, tag string) []pk.VarInt {
+	file, _ := os.Open(fmt.Sprintf("./data-generator/generated/data/minecraft/tags/%s/%s.json", rootTag, tag))
+	byteValue, _ := ioutil.ReadAll(file)
+	valueMap := make(map[string][]string)
+	_ = json.Unmarshal(byteValue, &valueMap)
+
+	entries := make([]pk.VarInt, 0, len(valueMap["values"]))
+	for _, v := range valueMap["values"] {
+		if v[0] == '#' {
+			entries = append(entries, getEntries(rootTag, registry, v[11:])...) // trim "#minecraft:"
+		} else {
+			entries = append(entries, pk.VarInt(data.RegistryID(registry, v)))
+		}
+	}
+	return entries
 }
