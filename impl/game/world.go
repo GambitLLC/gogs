@@ -43,7 +43,7 @@ func (w *World) GetColumn(x int, z int) *column {
 				paletteLength := len(section.Palette)
 				palette := make([]int32, paletteLength)
 				for i, block := range section.Palette {
-					palette[i] = data.ParseBlockId(block.Name, block.Properties)
+					palette[i] = data.BlockStateID(block.Name, block.Properties)
 				}
 				// TODO: also create the palette map
 

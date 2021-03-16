@@ -10,7 +10,7 @@ import (
 var blocksMap map[string]map[string]interface{}
 var idMap = make(map[string]map[string]int32)
 
-func ParseBlockId(name string, properties map[string]interface{}) int32 {
+func BlockStateID(name string, properties map[string]interface{}) int32 {
 	if blocksMap == nil {
 		blocksMap = make(map[string]map[string]interface{})
 		// Open our jsonFile

@@ -53,6 +53,8 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 			Recipes:    nil,
 		}.CreatePacket().Encode())
 
+		buf.Write(clientbound.VanillaTags().CreatePacket().Encode())
+
 		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
 
 		buf.Write(clientbound.UpdateViewPosition{
@@ -298,6 +300,29 @@ func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
 				BlockEntities:    nil,
 			}.CreatePacket().Encode()
 			buf.Write(chunk)
+
+			//temp := make([]byte, 2048)
+			//for i := range temp {
+			//	temp[i] = 255
+			//}
+			//
+			//updateLight := clientbound.UpdateLight{
+			//	ChunkX:         pk.VarInt(x + chunkX),
+			//	ChunkZ:         pk.VarInt(z + chunkZ),
+			//	TrustEdges:          false,
+			//	SkyLightMask:        0,
+			//	BlockLightMask:      1 << 5,
+			//	EmptySkyLightMask:   0,
+			//	EmptyBlockLightMask: 0,
+			//	SkyLightArrays:      clientbound.SkyLight{
+			//	},
+			//	BlockLightArrays:    clientbound.BlockLight{
+			//		Arrays: []pk.ByteArray{
+			//			temp,
+			//		},
+			//	},
+			//}
+			//buf.Write(updateLight.CreatePacket().Encode())
 		}
 	}
 	return buf.Bytes()
