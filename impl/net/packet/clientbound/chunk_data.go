@@ -33,7 +33,7 @@ func (s ChunkData) CreatePacket() pk.Packet {
 
 type Heightmap struct {
 	MotionBlocking []int64 `nbt:"MOTION_BLOCKING"`
-	WorldSurface   []int64 `nbt:"WORLD_SURFACE"`
+	//WorldSurface   []int64 `nbt:"WORLD_SURFACE"`
 }
 
 type BiomesArray []pk.VarInt

@@ -199,7 +199,7 @@ func (s *Server) joinGamePacket(player *ecs.Player) pk.Packet {
 					Value: []clientbound.BiomeRegistryEntry{
 						{
 							Name: "minecraft:plains",
-							ID:   1,
+							ID:   0,
 							Element: clientbound.BiomeProperties{
 								Precipitation: "none",
 								Depth:         0.125,
@@ -208,7 +208,7 @@ func (s *Server) joinGamePacket(player *ecs.Player) pk.Packet {
 								Downfall:      0.4,
 								Category:      "plains",
 								Effects: clientbound.BiomeEffects{
-									SkyColor:      0xFF851B,
+									SkyColor:      7907327,
 									WaterFogColor: 329011,
 									FogColor:      12638463,
 									WaterColor:    4159204,
@@ -231,13 +231,10 @@ func (s *Server) joinGamePacket(player *ecs.Player) pk.Packet {
 }
 
 func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
-	// TODO: get chunks & biomes from server & based on player position
 	buf := bytes.Buffer{}
 
-	biomes := make([]pk.VarInt, 1024, 1024)
-	for i := range biomes {
-		biomes[i] = 1
-	}
+	biomes := make([]pk.VarInt, 1024)
+	motionBlocking := make([]int64, 37)
 
 	chunkX := int(player.X) >> 4
 	chunkZ := int(player.Z) >> 4
@@ -293,11 +290,11 @@ func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
 				PrimaryBitMask: pk.VarInt(bitMask),
 				Heightmaps: pk.NBT{
 					V: clientbound.Heightmap{
-						MotionBlocking: make([]int64, 37),
-						WorldSurface:   make([]int64, 37),
+						MotionBlocking: motionBlocking,
+						//WorldSurface:   motion_blocking,
 					},
 				},
-				BiomesLength:     1024,
+				BiomesLength:     pk.VarInt(len(biomes)),
 				Biomes:           biomes,
 				Size:             pk.VarInt(len(chunkDataArray.Encode())),
 				Data:             chunkDataArray,
