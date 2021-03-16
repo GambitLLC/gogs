@@ -281,6 +281,11 @@ func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
 				})
 			}
 
+			blockEntities := make([]pk.NBT, len(column.BlockEntities))
+			for i, v := range column.BlockEntities {
+				blockEntities[i] = pk.NBT{V: v}
+			}
+
 			chunk := clientbound.ChunkData{
 				ChunkX:         pk.Int(x + chunkX),
 				ChunkZ:         pk.Int(z + chunkZ),
@@ -296,8 +301,8 @@ func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
 				Biomes:           biomes,
 				Size:             pk.VarInt(len(chunkDataArray.Encode())),
 				Data:             chunkDataArray,
-				NumBlockEntities: 0,
-				BlockEntities:    nil,
+				NumBlockEntities: pk.VarInt(len(blockEntities)),
+				BlockEntities:    blockEntities,
 			}.CreatePacket().Encode()
 			buf.Write(chunk)
 

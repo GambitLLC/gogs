@@ -95,5 +95,9 @@ func (s ChunkPalette) Encode() []byte {
 type BlockEntities []pk.NBT
 
 func (a BlockEntities) Encode() []byte {
-	return nil
+	buf := bytes.Buffer{}
+	for _, v := range a {
+		buf.Write(v.Encode())
+	}
+	return buf.Bytes()
 }

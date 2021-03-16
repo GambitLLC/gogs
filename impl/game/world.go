@@ -34,6 +34,7 @@ func (w *World) GetColumn(x int, z int) *column {
 
 		loadedColumn := w.LoadColumn(x, z)
 		if loadedColumn != nil {
+			val.BlockEntities = loadedColumn.Level.TileEntities
 			for _, section := range loadedColumn.Level.Sections {
 				// ignore empty sections
 				if section.Palette == nil {

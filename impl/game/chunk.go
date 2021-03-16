@@ -11,9 +11,10 @@ import (
 )
 
 type column struct {
-	X        int
-	Z        int
-	Sections [16]*chunkSection
+	X             int
+	Z             int
+	Sections      [16]*chunkSection
+	BlockEntities []blockEntity
 }
 
 func (c *column) SetBlock(x int, y int, z int, blockID int32) {
@@ -147,8 +148,8 @@ type anvilColumn struct {
 		//Entities
 		//LiquidTicks
 		//PostProcessing
-		Sections []anvilChunkSection
-		//TileEntities
+		Sections     []anvilChunkSection
+		TileEntities []blockEntity
 		//TileTicks
 		//InhabitedTime int64
 		//IsLightOn     byte `nbt:"isLightOn"`
@@ -158,19 +159,6 @@ type anvilColumn struct {
 		PosZ int32 `nbt:"zPos"`
 		//Biomes        []int32
 	}
-}
-
-type anvilChunkSection struct {
-	Palette []anvilBlock
-	Y       byte
-	//BlockLight  []byte
-	BlockStates []int64
-	//SkyLight    []byte
-}
-
-type anvilBlock struct {
-	Name       string
-	Properties map[string]interface{}
 }
 
 // Load read column data from []byte
@@ -192,4 +180,25 @@ func (c *anvilColumn) Load(data []byte) (err error) {
 
 	err = nbt.NewDecoder(r).Decode(c)
 	return
+}
+
+type anvilChunkSection struct {
+	Palette []anvilBlock
+	Y       byte
+	//BlockLight  []byte
+	BlockStates []int64
+	//SkyLight    []byte
+}
+
+type anvilBlock struct {
+	Name       string
+	Properties map[string]interface{}
+}
+
+type blockEntity struct {
+	ID         string `nbt:"id"`
+	KeepPacked byte   `nbt:"keepPacked"`
+	X          int32  `nbt:"x"`
+	Y          int32  `nbt:"y"`
+	Z          int32  `nbt:"z"`
 }
