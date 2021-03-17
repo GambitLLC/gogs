@@ -3,6 +3,7 @@ package ecs
 import (
 	"github.com/panjf2000/gnet"
 	pk "gogs/impl/net/packet"
+	"sync"
 )
 
 type PositionComponent struct {
@@ -32,7 +33,7 @@ type FoodComponent struct {
 }
 
 type InventoryComponent struct {
-	InventorySize uint8 // number of slots in inventory
+	InventoryLock sync.RWMutex
 	Inventory     []pk.Slot
 }
 

@@ -91,8 +91,7 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 		FoodComponent:       ecs.FoodComponent{Food: 20, Saturation: 0},
 		ConnectionComponent: ecs.ConnectionComponent{Connection: conn},
 		InventoryComponent: ecs.InventoryComponent{
-			InventorySize: 46, // https://wiki.vg/Inventory#Player_Inventory
-			Inventory:     make([]pk.Slot, 46),
+			Inventory: make([]pk.Slot, 46), // https://wiki.vg/Inventory#Player_Inventory
 		},
 		SpawnPosition: spawnPos,
 		GameMode:      0,
