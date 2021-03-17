@@ -8,8 +8,7 @@ import (
 )
 
 type World struct {
-	anvilColumnMap map[int]map[int]*anvilColumn
-	columnMap      map[int]map[int]*column
+	columnMap map[int]map[int]*column
 }
 
 func (w *World) SetBlock(x int, y int, z int, blockID int32) {
@@ -81,46 +80,34 @@ func (w *World) GetColumn(x int, z int) *column {
 
 // LoadColumn will load a column from a region file
 func (w *World) LoadColumn(x int, z int) *anvilColumn {
-	if w.anvilColumnMap == nil {
-		w.anvilColumnMap = make(map[int]map[int]*anvilColumn)
+	// TODO: load all columns in the region instead of repeatedly opening the same region
+	regionX := x >> 5
+	regionZ := z >> 5
+	r, err := region.Open(fmt.Sprintf("./test_world/region/r.%d.%d.mca", regionX, regionZ))
+	if err != nil {
+		return nil
+	}
+	defer r.Close()
+
+	sectorX := x % 32
+	if sectorX < 0 {
+		sectorX += 32
+	}
+	sectorZ := z % 32
+	if sectorZ < 0 {
+		sectorZ += 32
 	}
 
-	if w.anvilColumnMap[x] == nil {
-		w.anvilColumnMap[x] = make(map[int]*anvilColumn)
+	sector, err := r.ReadSector(sectorZ, sectorX)
+	if err != nil {
+		return nil
 	}
 
-	if w.anvilColumnMap[x][z] == nil {
-		regionX := x >> 5
-		regionZ := z >> 5
-		r, err := region.Open(fmt.Sprintf("./test_world/region/r.%d.%d.mca", regionX, regionZ))
-		if err != nil {
-			return nil
-		}
-		defer r.Close()
-
-		sectorX := x % 32
-		if sectorX < 0 {
-			sectorX += 32
-		}
-		sectorZ := z % 32
-		if sectorZ < 0 {
-			sectorZ += 32
-		}
-
-		sector, err := r.ReadSector(sectorZ, sectorX)
-		if err != nil {
-			return nil
-		}
-
-		var c anvilColumn
-		err = c.Load(sector)
-		if err != nil {
-			return nil
-		}
-
-		w.anvilColumnMap[x][z] = &c
-		return &c
+	var c anvilColumn
+	err = c.Load(sector)
+	if err != nil {
+		return nil
 	}
 
-	return w.anvilColumnMap[x][z]
+	return &c
 }
