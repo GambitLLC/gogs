@@ -95,16 +95,16 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 			Inventory:     make([]pk.Slot, 46),
 		},
 		SpawnPosition: spawnPos,
-		GameMode:      1,
+		GameMode:      0,
 		UUID:          u,
 		Name:          name,
 	}
 
-	// send a single starting block for now
+	// send a single starting stack for now
 	player.Inventory[36] = pk.Slot{
 		Present:   true,
 		ItemID:    1,
-		ItemCount: 1,
+		ItemCount: 64,
 		NBT:       pk.NBT{},
 	}
 	s.playerMap.uuidToPlayer[u] = player
