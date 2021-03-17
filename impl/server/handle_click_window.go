@@ -74,6 +74,10 @@ func (s *Server) handleClickWindow(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 					heldSlot.ItemID = in.ClickedItem.ItemID
 					heldSlot.ItemCount = in.ClickedItem.ItemCount/2 + (in.ClickedItem.ItemCount & 1)
 					in.ClickedItem.ItemCount /= 2
+					if in.ClickedItem.ItemCount == 0 {
+						in.ClickedItem.ItemID = 0
+						in.ClickedItem.Present = false
+					}
 					windowSlotChanged = true
 					heldSlotChanged = true
 				} else if in.ClickedItem.ItemID == heldSlot.ItemID || in.ClickedItem.ItemID == 0 {
