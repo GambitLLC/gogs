@@ -31,6 +31,7 @@ type Server struct {
 
 	playerMapMutex sync.RWMutex
 	playerMap      *playerMapping
+	entityMap      map[uint64]interface{}
 	world          *game.World
 }
 
@@ -108,6 +109,7 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 	}
 	s.playerMap.uuidToPlayer[u] = player
 	s.playerMap.connToPlayer[conn] = player
+	s.entityMap[player.ID()] = player
 
 	return player
 }
@@ -149,6 +151,7 @@ func (s *Server) Init() {
 		uuidToPlayer: make(map[uuid.UUID]*ecs.Player),
 		connToPlayer: make(map[gnet.Conn]*ecs.Player),
 	}
+	s.entityMap = make(map[uint64]interface{})
 	// TODO: set up Server initialization (world, etc)
 	s.world = &game.World{}
 

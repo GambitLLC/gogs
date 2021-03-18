@@ -40,3 +40,10 @@ type Player struct {
 	HeldSlot pk.Slot // item held on the cursor
 	HeldItem uint8   // hot bar slot which is selected
 }
+
+type ItemEntity struct {
+	BasicEntity
+	PositionComponent
+	VelocityComponent
+	Item pk.Slot
+}

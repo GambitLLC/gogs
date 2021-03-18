@@ -30,6 +30,8 @@ func (s *Server) handleClickWindow(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 
 	window.InventoryLock.RLock()
 	// TODO: this check doesn't work for all modes ... move or change this
+	// TODO: fix mutex usage (write can occur after this if two clicks (between 2 ppl) happen in same time frame)
+	// consider moving this check into where the write occurs? can create a copy variable to compare to...
 	if slot >= 0 && slot < len(window.Inventory) && window.Inventory[slot] != in.ClickedItem {
 		log.Printf("rejected: %v, %v", window.Inventory[slot], in.ClickedItem)
 		rejected = true

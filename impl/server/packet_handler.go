@@ -141,6 +141,8 @@ func (s *Server) handlePlayState(conn gnet.Conn, pkt pk.Packet) (out []byte, err
 		return s.handleClientStatus(conn, pkt)
 	case packetids.ClickWindow:
 		return s.handleClickWindow(conn, pkt)
+	case packetids.PlayerDigging:
+		return s.handlePlayerDigging(conn, pkt)
 	case packetids.PlayerBlockPlacement:
 		return s.handlePlayerBlockPlacement(conn, pkt)
 	case packetids.HeldItemChangeServerbound:

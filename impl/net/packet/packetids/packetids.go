@@ -25,7 +25,7 @@ const (
 	LoginPluginResponse = 0x02
 
 	// Play Clientbound
-	StatusEntity                     = 0x00
+	SpawnEntity                      = 0x00
 	SpawnExperienceOrb               = 0x01
 	SpawnLivingEntity                = 0x02
 	SpawnPainting                    = 0x03
