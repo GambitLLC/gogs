@@ -7,24 +7,24 @@ import (
 	"os"
 )
 
-var blocksMap map[string]map[string]interface{}
-var idMap = make(map[string]map[string]int32)
+var idMap map[string]map[string]int32
 
 func BlockStateID(name string, properties map[string]interface{}) int32 {
-	if blocksMap == nil {
-		blocksMap = make(map[string]map[string]interface{})
-		// Open our jsonFile
+	if idMap == nil {
+		idMap = make(map[string]map[string]int32)
+		blocksJson := make(map[string]map[string]interface{})
+
 		jsonFile, _ := os.Open("./data-generator/generated/reports/blocks.json")
 		defer jsonFile.Close()
 		byteValue, _ := ioutil.ReadAll(jsonFile)
 
-		err := json.Unmarshal(byteValue, &blocksMap)
+		err := json.Unmarshal(byteValue, &blocksJson)
 		if err != nil {
 			return 0
 		}
 
 		// load all blocks into idMap
-		for name, blockMap := range blocksMap {
+		for name, blockMap := range blocksJson {
 			if idMap[name] == nil {
 				idMap[name] = make(map[string]int32)
 			}
