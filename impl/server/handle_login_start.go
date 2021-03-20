@@ -245,7 +245,7 @@ func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
 	}
 	for x := -viewDistance; x <= viewDistance; x++ {
 		for z := -viewDistance; z <= viewDistance; z++ {
-			column := s.world.GetColumn(x+chunkX, z+chunkZ)
+			column := s.world.Column(x+chunkX, z+chunkZ)
 
 			var chunkDataArray clientbound.ChunkDataArray
 			chunkDataArray = make(clientbound.ChunkDataArray, 0, 16)

@@ -12,10 +12,10 @@ type World struct {
 }
 
 func (w *World) SetBlock(x int, y int, z int, blockID int32) {
-	w.GetColumn(x>>4, z>>4).SetBlock(x, y, z, blockID)
+	w.Column(x>>4, z>>4).SetBlock(x, y, z, blockID)
 }
 
-func (w *World) GetColumn(x int, z int) *column {
+func (w *World) Column(x int, z int) *column {
 	if w.columnMap == nil {
 		w.columnMap = make(map[int]map[int]*column)
 	}
