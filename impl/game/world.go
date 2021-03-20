@@ -25,89 +25,94 @@ func (w *World) GetColumn(x int, z int) *column {
 	}
 
 	if w.columnMap[x][z] == nil {
-		val := column{
-			X:        x,
-			Z:        z,
-			Sections: [16]*chunkSection{},
-		}
-
-		loadedColumn := w.LoadColumn(x, z)
-		if loadedColumn != nil {
-			val.BlockEntities = loadedColumn.Level.TileEntities
-			for _, section := range loadedColumn.Level.Sections {
-				// ignore empty sections
-				if section.Palette == nil {
-					continue
-				}
-
-				paletteLength := len(section.Palette)
-				palette := make([]int32, paletteLength)
-				for i, block := range section.Palette {
-					palette[i] = data.BlockStateID(block.Name, block.Properties)
-				}
-				// TODO: also create the palette map
-
-				// don't store empty air chunks (anvil file seems to store them)
-				if len(palette) == 1 && palette[0] == 0 {
-					continue
-				}
-
-				bitsPerBlock := int(math.Ceil(math.Log2(float64(len(section.Palette)))))
-				if bitsPerBlock < 4 {
-					bitsPerBlock = 4
-				}
-
-				// copy over directly from anvil format
-				blockStates := newCompactedDataArray(bitsPerBlock, 4096)
-				for i, block := range section.BlockStates {
-					blockStates.Data[i] = block
-				}
-
-				val.Sections[section.Y] = &chunkSection{
-					Y:           section.Y,
-					Palette:     palette,
-					BlockStates: blockStates,
-				}
-			}
-		}
-
-		w.columnMap[x][z] = &val
-		return &val
+		w.loadRegion(x>>5, z>>5)
 	}
 
 	return w.columnMap[x][z]
 }
 
-// LoadColumn will load a column from a region file
-func (w *World) LoadColumn(x int, z int) *anvilColumn {
-	// TODO: load all columns in the region instead of repeatedly opening the same region
-	regionX := x >> 5
-	regionZ := z >> 5
-	r, err := region.Open(fmt.Sprintf("./test_world/region/r.%d.%d.mca", regionX, regionZ))
-	if err != nil {
-		return nil
+// loadRegion loads all chunks in the region into the mapping.
+func (w *World) loadRegion(regionX int, regionZ int) {
+	r, rErr := region.Open(fmt.Sprintf("./test_world/region/r.%d.%d.mca", regionX, regionZ))
+	if rErr != nil {
+		// store empty columns if region file couldn't be opened
+		for x := 0; x < 32; x += 1 {
+			for z := 0; z < 32; z += 1 {
+				w.storeColumn(regionX<<5+x, regionZ<<5+z, nil)
+			}
+		}
+		return
 	}
 	defer r.Close()
 
-	sectorX := x % 32
-	if sectorX < 0 {
-		sectorX += 32
+	for x := 0; x < 32; x += 1 {
+		for z := 0; z < 32; z += 1 {
+			sector, err := r.ReadSector(z, x)
+			if err != nil {
+				w.storeColumn(regionX<<5+x, regionZ<<5+z, nil)
+				continue
+			}
+
+			var c anvilColumn
+			err = c.Load(sector)
+			if err != nil {
+				w.storeColumn(regionX<<5+x, regionZ<<5+z, nil)
+				continue
+			}
+
+			w.storeColumn(regionX<<5+x, regionZ<<5+z, &c)
+		}
 	}
-	sectorZ := z % 32
-	if sectorZ < 0 {
-		sectorZ += 32
+}
+
+func (w *World) storeColumn(x int, z int, c *anvilColumn) {
+	val := column{
+		X:        x,
+		Z:        z,
+		Sections: [16]*chunkSection{},
 	}
 
-	sector, err := r.ReadSector(sectorZ, sectorX)
-	if err != nil {
-		return nil
+	if c != nil {
+		val.BlockEntities = c.Level.TileEntities
+		for _, section := range c.Level.Sections {
+			// ignore empty sections
+			if section.Palette == nil {
+				continue
+			}
+
+			paletteLength := len(section.Palette)
+			palette := make([]int32, paletteLength)
+			for i, block := range section.Palette {
+				palette[i] = data.BlockStateID(block.Name, block.Properties)
+			}
+			// TODO: also create the palette map
+
+			// don't store empty air chunks (anvil file seems to store them)
+			if len(palette) == 1 && palette[0] == 0 {
+				continue
+			}
+
+			bitsPerBlock := int(math.Ceil(math.Log2(float64(len(section.Palette)))))
+			if bitsPerBlock < 4 {
+				bitsPerBlock = 4
+			}
+
+			// copy over directly from anvil format
+			blockStates := newCompactedDataArray(bitsPerBlock, 4096)
+			for i, block := range section.BlockStates {
+				blockStates.Data[i] = block
+			}
+
+			val.Sections[section.Y] = &chunkSection{
+				Y:           section.Y,
+				Palette:     palette,
+				BlockStates: blockStates,
+			}
+		}
 	}
 
-	var c anvilColumn
-	err = c.Load(sector)
-	if err != nil {
-		return nil
+	if w.columnMap[x] == nil {
+		w.columnMap[x] = make(map[int]*column)
 	}
-
-	return &c
+	w.columnMap[x][z] = &val
 }
