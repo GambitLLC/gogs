@@ -3,6 +3,7 @@ package ecs
 import (
 	"github.com/google/uuid"
 	pk "gogs/impl/net/packet"
+	"sync"
 	"sync/atomic"
 )
 
@@ -37,8 +38,9 @@ type Player struct {
 
 	GameMode uint8
 
-	HeldSlot pk.Slot // item held on the cursor
-	HeldItem uint8   // hot bar slot which is selected
+	HeldSlotLock sync.Mutex
+	HeldSlot     pk.Slot // item held on the cursor
+	HeldItem     uint8   // hot bar slot which is selected
 }
 
 type ItemEntity struct {

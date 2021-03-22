@@ -100,10 +100,16 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 		Name:          name,
 	}
 
-	// send a single starting stack for now
+	// send some starting stacks for now
 	player.Inventory[36] = pk.Slot{
 		Present:   true,
 		ItemID:    1,
+		ItemCount: 64,
+		NBT:       pk.NBT{},
+	}
+	player.Inventory[37] = pk.Slot{
+		Present:   true,
+		ItemID:    3,
 		ItemCount: 64,
 		NBT:       pk.NBT{},
 	}
