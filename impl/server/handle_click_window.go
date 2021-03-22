@@ -36,83 +36,146 @@ func (s *Server) handleClickWindow(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 	player.HeldSlotLock.Lock()
 	defer player.HeldSlotLock.Unlock()
 
-	if !rejected {
-		switch in.Mode {
-		default: // not implemented/supported
-			rejected = true
-		case 0: // Normal left & right click
-			switch in.Button {
-			case 0: // Normal left click
-				if slot == -999 {
-					// TODO: drop held item
-					rejected = true
-					break
-				}
+	// painting status is reset if any packets come in that aren't painting mode (5)
+	if in.Mode != 5 && player.PaintingSlots != nil {
+		player.PaintingSlots = nil
+	}
 
-				if window.Inventory[slot] != in.ClickedItem {
-					rejected = true
-					break
-				}
-
-				if player.HeldSlot.Present && window.Inventory[slot].ItemID == player.HeldSlot.ItemID {
-					placeStack(&player.HeldSlot, &window.Inventory[slot])
-				} else {
-					// swap items
-					window.Inventory[slot], player.HeldSlot = player.HeldSlot, window.Inventory[slot]
-				}
-			case 1: // Normal right click
-				if slot == -999 {
-					// TODO: drop held item
-					rejected = true
-					break
-				}
-
-				if window.Inventory[slot] != in.ClickedItem {
-					rejected = true
-					break
-				}
-
-				if !player.HeldSlot.Present {
-					player.HeldSlot = halveStack(&window.Inventory[slot])
-				} else if window.Inventory[slot].ItemID == player.HeldSlot.ItemID || window.Inventory[slot].ItemID == 0 {
-					one := takeOne(&player.HeldSlot)
-					if window.Inventory[slot].Present {
-						window.Inventory[slot].ItemCount += 1
-					} else {
-						window.Inventory[slot] = one
-					}
-				} else {
-					// swap items
-					window.Inventory[slot], player.HeldSlot = player.HeldSlot, window.Inventory[slot]
-				}
-			}
-		case 1: // shift left/right click
-			rejected = true
-		case 2: // number keys
-			// clicked item is always empty for number keys, don't need to compare to window
-
-			if in.Button < 0 || in.Button > 8 {
-				rejected = true // shouldn't ever occur, but check in case ...
+	switch in.Mode {
+	default: // not implemented/supported
+		rejected = true
+	case 0: // Normal left & right click
+		switch in.Button {
+		case 0: // Normal left click
+			if slot == -999 {
+				// TODO: drop held item
+				rejected = true
 				break
 			}
 
-			hotBarSlot := uint8(in.Button)
-
-			if in.WindowID != 0 {
-				player.InventoryLock.Lock()
-				defer player.InventoryLock.Unlock()
+			if window.Inventory[slot] != in.ClickedItem {
+				rejected = true
+				break
 			}
 
-			// swap selected item with hot bar slot
-			window.Inventory[slot], player.Inventory[hotBarSlot+36] = player.Inventory[hotBarSlot+36], window.Inventory[slot]
-		case 3: // middle click (only defined for creative in other windows)
+			if player.HeldSlot.Present && window.Inventory[slot].ItemID == player.HeldSlot.ItemID {
+				placeStack(&player.HeldSlot, &window.Inventory[slot])
+			} else {
+				// swap items
+				window.Inventory[slot], player.HeldSlot = player.HeldSlot, window.Inventory[slot]
+			}
+		case 1: // Normal right click
+			if slot == -999 {
+				// TODO: drop held item
+				rejected = true
+				break
+			}
+
+			if window.Inventory[slot] != in.ClickedItem {
+				rejected = true
+				break
+			}
+
+			if !player.HeldSlot.Present {
+				player.HeldSlot = halveStack(&window.Inventory[slot])
+			} else if window.Inventory[slot].ItemID == player.HeldSlot.ItemID || window.Inventory[slot].ItemID == 0 {
+				one := takeAmt(&player.HeldSlot, 1)
+				if window.Inventory[slot].Present {
+					window.Inventory[slot].ItemCount += 1
+				} else {
+					window.Inventory[slot] = one
+				}
+			} else {
+				// swap items
+				window.Inventory[slot], player.HeldSlot = player.HeldSlot, window.Inventory[slot]
+			}
+		}
+	case 1: // shift left/right click
+		rejected = true
+	case 2: // number keys
+		// no check between clickedItem and window inventory b/c clicked item is always empty
+		if in.Button < 0 || in.Button > 8 {
+			rejected = true // shouldn't ever occur, but check in case ...
+			break
+		}
+
+		hotBarSlot := uint8(in.Button)
+
+		if in.WindowID != 0 {
+			player.InventoryLock.Lock()
+			defer player.InventoryLock.Unlock()
+		}
+
+		// swap selected item with hot bar slot
+		hotBar := player.Inventory[36:45]
+		window.Inventory[slot], hotBar[hotBarSlot] = hotBar[hotBarSlot], window.Inventory[slot]
+	case 3: // middle click (only defined for creative in other windows)
+		rejected = true
+	case 4: // drop key or no-op
+		rejected = true
+	case 5: // painting (drag) mode
+		switch in.Button {
+		default:
 			rejected = true
-		case 4: // drop key or no-op
+		case 0: // start left mouse drag
+			player.PaintingLock.Lock()
+			player.PaintingSlots = make([]uint8, 0, len(window.Inventory))
+			player.PaintingLock.Unlock()
+		case 1: // add slot for left mouse drag
+			player.PaintingLock.Lock()
+			defer player.PaintingLock.Unlock()
+			if player.PaintingSlots == nil {
+				rejected = true
+				break
+			}
+			player.PaintingSlots = append(player.PaintingSlots, uint8(slot))
+		case 2: // end left mouse drag
+			player.PaintingLock.Lock()
+			defer player.PaintingLock.Unlock()
+			if player.PaintingSlots == nil || len(player.PaintingSlots) > int(player.HeldSlot.ItemCount) {
+				rejected = true
+				break
+			}
+
+			// check to make sure all slots are empty or match the id
+			for _, slot := range player.PaintingSlots {
+				if window.Inventory[slot].Present && window.Inventory[slot].ItemID != player.HeldSlot.ItemID {
+					rejected = true
+					break
+				}
+			}
+
+			if rejected {
+				break
+			}
+
+			amt := int(player.HeldSlot.ItemCount) / len(player.PaintingSlots)
+			for _, slot := range player.PaintingSlots {
+				stack := takeAmt(&player.HeldSlot, amt)
+				if window.Inventory[slot].Present {
+					placeStack(&stack, &window.Inventory[slot])
+				} else {
+					window.Inventory[slot] = stack
+				}
+
+			}
+			player.PaintingSlots = nil
+		}
+	case 6: // double click
+		// vanilla behaviour: only double clicks which come from picking up a new item do anything
+		if window.Inventory[slot].Present || !player.HeldSlot.Present {
 			rejected = true
-		case 5: // drag mode
-			rejected = true
-		case 6: // double click
-			rejected = true
+			break
+		}
+
+		// look through all inventory slots to find matching items
+		for i := range window.Inventory {
+			if player.HeldSlot.ItemCount == 64 {
+				break
+			}
+			if window.Inventory[i].ItemID == player.HeldSlot.ItemID {
+				placeStack(&window.Inventory[i], &player.HeldSlot)
+			}
 		}
 	}
 
@@ -148,6 +211,8 @@ func (s *Server) handleClickWindow(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 	return
 }
 
+// placeStack places as many items as it can from one stack onto another
+// NOTE: placeStack does not check if stack item id's are correct...
 func placeStack(from *pk.Slot, onto *pk.Slot) {
 	sum := from.ItemCount + onto.ItemCount
 	if sum > 64 {
@@ -180,19 +245,20 @@ func halveStack(stack *pk.Slot) pk.Slot {
 }
 
 // takeOne takes a single item from the stack and returns it
-func takeOne(stack *pk.Slot) pk.Slot {
-	one := pk.Slot{
+// NOTE: does not care if x is greater than stack amount ...
+func takeAmt(stack *pk.Slot, amt int) pk.Slot {
+	res := pk.Slot{
 		Present:   true,
 		ItemID:    stack.ItemID,
-		ItemCount: 1,
+		ItemCount: pk.Byte(amt),
 		NBT:       stack.NBT,
 	}
 
-	stack.ItemCount -= 1
-	if stack.ItemCount == 0 {
+	stack.ItemCount -= pk.Byte(amt)
+	if stack.ItemCount <= 0 {
 		stack.Present = false
 		stack.ItemID = 0
 	}
 
-	return one
+	return res
 }

@@ -41,6 +41,9 @@ type Player struct {
 	HeldSlotLock sync.Mutex
 	HeldSlot     pk.Slot // item held on the cursor
 	HeldItem     uint8   // hot bar slot which is selected
+
+	PaintingLock  sync.RWMutex
+	PaintingSlots []uint8
 }
 
 type ItemEntity struct {

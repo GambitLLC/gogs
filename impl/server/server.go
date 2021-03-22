@@ -107,6 +107,12 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 		ItemCount: 64,
 		NBT:       pk.NBT{},
 	}
+	player.Inventory[38] = pk.Slot{
+		Present:   true,
+		ItemID:    1,
+		ItemCount: 1,
+		NBT:       pk.NBT{},
+	}
 	player.Inventory[37] = pk.Slot{
 		Present:   true,
 		ItemID:    3,
