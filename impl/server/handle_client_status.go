@@ -34,11 +34,13 @@ func (s *Server) handleClientStatus(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 		}.CreatePacket().Encode())
 
 		// send inventory
+		player.InventoryLock.RLock()
 		buf.Write(clientbound.WindowItems{
 			WindowID: 0,
 			Count:    pk.Short(len(player.Inventory)),
 			SlotData: player.Inventory,
 		}.CreatePacket().Encode())
+		player.InventoryLock.RUnlock()
 
 		return buf.Bytes(), nil
 	case 1: // Request stats

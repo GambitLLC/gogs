@@ -73,11 +73,13 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 		buf.Write((&clientbound.PlayerPositionAndLook{}).FromPlayer(*player).CreatePacket().Encode())
 
 		// send inventory
+		player.InventoryLock.RLock()
 		buf.Write(clientbound.WindowItems{
 			WindowID: 0,
 			Count:    pk.Short(len(player.Inventory)),
 			SlotData: player.Inventory,
 		}.CreatePacket().Encode())
+		player.InventoryLock.RUnlock()
 
 		// send time update with negative time to keep sun in position
 		buf.Write(clientbound.TimeUpdate{WorldAge: 0, TimeOfDay: -6000}.CreatePacket().Encode())
