@@ -91,7 +91,66 @@ func (s *Server) handleClickWindow(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 			}
 		}
 	case 1: // shift left/right click
-		rejected = true
+		if (in.Button != 0 && in.Button != 1) || slot < 0 {
+			rejected = true
+			break
+		}
+
+		// ignore shift clicking empty slots
+		selectedItem := &window.Inventory[slot]
+		if !selectedItem.Present {
+			break
+		}
+
+		if in.WindowID == 0 {
+			// TODO: handle items that shift into armor slots
+
+			if slot < 9 || slot >= 36 && slot < 45 {
+				inventory := player.Inventory[9:36]
+				// find a slot in the main inventory with same item type
+				for i := range inventory {
+					if inventory[i].ItemID == selectedItem.ItemID {
+						placeStack(selectedItem, &inventory[i])
+					}
+					if !selectedItem.Present {
+						break
+					}
+				}
+
+				if selectedItem.Present {
+					// find an empty slot to place remainder into
+					for i := range inventory {
+						if !inventory[i].Present {
+							inventory[i], *selectedItem = *selectedItem, inventory[i]
+							break
+						}
+					}
+				}
+			} else if slot < 36 {
+				hotBar := player.Inventory[36:45]
+				// find a slot in the hot bar that contains the same item type
+				for i := range hotBar {
+					if hotBar[i].ItemID == selectedItem.ItemID {
+						placeStack(selectedItem, &hotBar[i])
+					}
+					if !selectedItem.Present {
+						break
+					}
+				}
+
+				if selectedItem.Present {
+					// find an empty slot to place remainder into
+					for i := range hotBar {
+						if !hotBar[i].Present {
+							hotBar[i], *selectedItem = *selectedItem, hotBar[i]
+							break
+						}
+					}
+				}
+			} else {
+				rejected = true
+			}
+		}
 	case 2: // number keys
 		// no check between clickedItem and window inventory b/c clicked item is always empty
 		if in.Button < 0 || in.Button > 8 {
