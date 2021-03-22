@@ -177,10 +177,14 @@ func (s *Server) handleClickWindow(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 		default:
 			rejected = true
 		case 0: // start left mouse drag
+			fallthrough
+		case 4: // start right mouse drag
 			player.PaintingLock.Lock()
 			player.PaintingSlots = make([]uint8, 0, len(window.Inventory))
 			player.PaintingLock.Unlock()
 		case 1: // add slot for left mouse drag
+			fallthrough
+		case 5: // add slot for right mouse drag
 			player.PaintingLock.Lock()
 			defer player.PaintingLock.Unlock()
 			if player.PaintingSlots == nil {
@@ -189,6 +193,8 @@ func (s *Server) handleClickWindow(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 			}
 			player.PaintingSlots = append(player.PaintingSlots, uint8(slot))
 		case 2: // end left mouse drag
+			fallthrough
+		case 6: // end right mouse drag
 			player.PaintingLock.Lock()
 			defer player.PaintingLock.Unlock()
 			if player.PaintingSlots == nil || len(player.PaintingSlots) > int(player.HeldSlot.ItemCount) {
@@ -208,7 +214,16 @@ func (s *Server) handleClickWindow(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 				break
 			}
 
-			amt := int(player.HeldSlot.ItemCount) / len(player.PaintingSlots)
+			var amt int
+			if in.Button == 2 { // left mouse
+				amt = int(player.HeldSlot.ItemCount) / len(player.PaintingSlots)
+			} else if in.Button == 6 { // right mouse
+				amt = 1
+			} else {
+				rejected = true
+				break
+			}
+
 			for _, slot := range player.PaintingSlots {
 				stack := takeAmt(&player.HeldSlot, amt)
 				if window.Inventory[slot].Present {
