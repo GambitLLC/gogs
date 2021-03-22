@@ -103,7 +103,7 @@ func getEntries(rootTag string, registry string, tag string) []pk.VarInt {
 		if v[0] == '#' {
 			entries = append(entries, getEntries(rootTag, registry, v[11:])...) // trim "#minecraft:"
 		} else {
-			entries = append(entries, pk.VarInt(data.RegistryID(registry, v)))
+			entries = append(entries, pk.VarInt(data.ProtocolID(registry, v)))
 		}
 	}
 	return entries

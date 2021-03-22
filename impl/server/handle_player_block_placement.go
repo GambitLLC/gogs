@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/panjf2000/gnet"
+	"gogs/impl/data"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
@@ -30,25 +31,38 @@ func (s *Server) handlePlayerBlockPlacement(conn gnet.Conn, pkt pk.Packet) (out 
 	}
 
 	// TODO: determine block id from player inventory
-	s.world.SetBlock(newX, newY, newZ, 1)
+	player := s.playerFromConn(conn)
 
-	out = clientbound.BlockChange{
-		Location: pk.Position{
-			X: int32(newX),
-			Y: int32(newY),
-			Z: int32(newZ),
-		},
-		BlockID: 1,
-	}.CreatePacket().Encode()
+	player.InventoryLock.Lock()
+	defer player.InventoryLock.Unlock()
 
-	s.playerMapMutex.RLock()
-	for c := range s.playerMap.connToPlayer {
-		// TODO: block change packet should only be sent to players if chunk is loaded
-		if c != conn {
+	itemID := data.NamespacedID("minecraft:item", int32(player.Inventory[player.HeldItem+36].ItemID))
+	blockID := data.BlockStateID(itemID, nil)
+
+	if blockID != 0 {
+		player.Inventory[player.HeldItem+36].ItemCount -= 1
+		if player.Inventory[player.HeldItem+36].ItemCount == 0 {
+			player.Inventory[player.HeldItem+36].Present = false
+			player.Inventory[player.HeldItem+36].ItemID = 0
+		}
+		s.world.SetBlock(newX, newY, newZ, blockID)
+
+		out = clientbound.BlockChange{
+			Location: pk.Position{
+				X: int32(newX),
+				Y: int32(newY),
+				Z: int32(newZ),
+			},
+			BlockID: pk.VarInt(blockID),
+		}.CreatePacket().Encode()
+
+		s.playerMapMutex.RLock()
+		for c := range s.playerMap.connToPlayer {
+			// TODO: block change packet should only be sent to players if chunk is loaded
 			_ = c.AsyncWrite(out)
 		}
+		s.playerMapMutex.RUnlock()
 	}
-	s.playerMapMutex.RUnlock()
 
-	return
+	return nil, nil
 }
