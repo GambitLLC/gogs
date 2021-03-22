@@ -286,7 +286,7 @@ func (s *Server) handleClickWindow(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 }
 
 // placeStack places as many items as it can from one stack onto another
-// NOTE: placeStack does not check if stack item id's are correct...
+// NOTE: placeStack does not check if the two items are stackable...
 func placeStack(from *pk.Slot, onto *pk.Slot) {
 	sum := from.ItemCount + onto.ItemCount
 	if sum > 64 {
@@ -294,16 +294,14 @@ func placeStack(from *pk.Slot, onto *pk.Slot) {
 		from.ItemCount = sum - 64
 	} else {
 		onto.ItemCount = sum
-		from.ItemCount = 0
-		from.ItemID = 0
-		from.Present = false
+		*from = pk.Slot{}
 	}
 }
 
 // halveStack returns the greater half of the stack
 func halveStack(stack *pk.Slot) pk.Slot {
 	half := pk.Slot{
-		Present:   true,
+		Present:   stack.Present,
 		ItemID:    stack.ItemID,
 		ItemCount: stack.ItemCount/2 + (stack.ItemCount & 1),
 		NBT:       stack.NBT,
@@ -311,18 +309,17 @@ func halveStack(stack *pk.Slot) pk.Slot {
 
 	stack.ItemCount /= 2
 	if stack.ItemCount == 0 {
-		stack.ItemID = 0
-		stack.Present = false
+		*stack = pk.Slot{}
 	}
 
 	return half
 }
 
 // takeOne takes a single item from the stack and returns it
-// NOTE: does not care if x is greater than stack amount ...
+// NOTE: does not care if amt is greater than stack amount ...
 func takeAmt(stack *pk.Slot, amt int) pk.Slot {
 	res := pk.Slot{
-		Present:   true,
+		Present:   stack.Present,
 		ItemID:    stack.ItemID,
 		ItemCount: pk.Byte(amt),
 		NBT:       stack.NBT,
@@ -330,8 +327,7 @@ func takeAmt(stack *pk.Slot, amt int) pk.Slot {
 
 	stack.ItemCount -= pk.Byte(amt)
 	if stack.ItemCount <= 0 {
-		stack.Present = false
-		stack.ItemID = 0
+		*stack = pk.Slot{}
 	}
 
 	return res
