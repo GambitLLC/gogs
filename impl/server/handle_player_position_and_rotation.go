@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"github.com/panjf2000/gnet"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
@@ -34,6 +35,22 @@ func (s *Server) handlePlayerPositionAndRotation(conn gnet.Conn, pkt pk.Packet) 
 	}.CreatePacket()
 	s.broadcastPacket(outPacket, conn)
 
+	chunkX := int(in.X) >> 4
+	chunkZ := int(in.Z) >> 4
+	if int(player.X)>>4 != chunkX || int(player.Z)>>4 != chunkZ {
+		buf := bytes.Buffer{}
+		buf.Write(clientbound.UpdateViewPosition{
+			ChunkX: pk.VarInt(chunkX),
+			ChunkZ: pk.VarInt(chunkZ),
+		}.CreatePacket().Encode())
+
+		// TODO: Add unload chunks for chunks out of range? not sure if needed
+		// TODO: optimize: just load the new chunks in the distance instead of sending all chunks nearby
+		buf.Write(s.chunkDataPackets(player))
+
+		out = buf.Bytes()
+	}
+
 	player.X = float64(in.X)
 	player.Y = float64(in.Y)
 	player.Z = float64(in.Z)
@@ -41,5 +58,5 @@ func (s *Server) handlePlayerPositionAndRotation(conn gnet.Conn, pkt pk.Packet) 
 	player.Yaw = float32(in.Yaw)
 	player.Pitch = float32(in.Pitch)
 
-	return nil, nil
+	return
 }
