@@ -95,7 +95,7 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 			Inventory: make([]pk.Slot, 46), // https://wiki.vg/Inventory#Player_Inventory
 		},
 		SpawnPosition: spawnPos,
-		GameMode:      0,
+		GameMode:      1,
 		UUID:          u,
 		Name:          name,
 	}
@@ -205,6 +205,7 @@ func (s *Server) OnClosed(conn gnet.Conn, _ error) gnet.Action {
 		s.playerMapMutex.Unlock()
 
 		player.Connection = nil
+		player.Online = false
 
 		logger.Printf("Player %v disconnected", player.Name)
 
