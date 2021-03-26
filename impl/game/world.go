@@ -82,10 +82,13 @@ func (w *World) storeColumn(x int, z int, c *anvilColumn) {
 
 			paletteLength := len(section.Palette)
 			palette := make([]int32, paletteLength)
+			paletteMap := make(map[int32]uint8, paletteLength)
+
 			for i, block := range section.Palette {
-				palette[i] = data.BlockStateID(block.Name, block.Properties)
+				id := data.BlockStateID(block.Name, block.Properties)
+				palette[i] = id
+				paletteMap[id] = uint8(i)
 			}
-			// TODO: also create the palette map
 
 			// don't store empty air chunks (anvil file seems to store them)
 			if len(palette) == 1 && palette[0] == 0 {
@@ -106,6 +109,7 @@ func (w *World) storeColumn(x int, z int, c *anvilColumn) {
 			val.Sections[section.Y] = &chunkSection{
 				Y:           section.Y,
 				Palette:     palette,
+				paletteMap:  paletteMap,
 				BlockStates: blockStates,
 			}
 		}
