@@ -247,6 +247,10 @@ func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
 	}
 	for x := -viewDistance; x <= viewDistance; x++ {
 		for z := -viewDistance; z <= viewDistance; z++ {
+			if player.TrackChunk(x, z) {
+				continue
+			}
+
 			column := s.world.Column(x+chunkX, z+chunkZ)
 
 			var chunkDataArray clientbound.ChunkDataArray
