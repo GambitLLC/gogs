@@ -62,7 +62,14 @@ func (s *Server) handlePlayerBlockPlacement(conn gnet.Conn, pkt pk.Packet) (out 
 			_ = c.AsyncWrite(out)
 		}
 		s.playerMapMutex.RUnlock()
+
+		// send out updated item count
+		out = clientbound.SetSlot{
+			WindowID: 0,
+			Slot:     pk.Short(player.HeldItem + 36),
+			SlotData: player.Inventory[player.HeldItem+36],
+		}.CreatePacket().Encode()
 	}
 
-	return nil, nil
+	return
 }
