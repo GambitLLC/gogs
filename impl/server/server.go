@@ -26,8 +26,10 @@ type playerMapping struct {
 }
 
 type serverSettings struct {
-	WorldName string
-	GameMode  uint8
+	WorldName    string
+	GameMode     uint8
+	ViewDistance uint8
+	MaxPlayers   uint8
 }
 
 type Server struct {
@@ -188,8 +190,10 @@ func (s *Server) init() {
 func (s *Server) loadSettings() error {
 	// default server settings
 	s.serverSettings = serverSettings{
-		WorldName: "test_world",
-		GameMode:  0,
+		WorldName:    "test_world",
+		GameMode:     0,
+		ViewDistance: 10,
+		MaxPlayers:   20,
 	}
 
 	// Open our jsonFile

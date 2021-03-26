@@ -21,6 +21,9 @@ func (s *Server) handleClientSettings(conn gnet.Conn, pkt pk.Packet) (out []byte
 
 	player.ChatMode = uint8(in.ChatMode)
 	player.ViewDistance = byte(in.ViewDistance)
+	if player.ViewDistance > s.ViewDistance {
+		player.ViewDistance = s.ViewDistance
+	}
 
 	if !player.Online {
 		player.Online = true
@@ -142,6 +145,7 @@ func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
 	chunkZ := int(player.Z) >> 4
 
 	viewDistance := int(player.ViewDistance)
+
 	for x := -viewDistance; x <= viewDistance; x++ {
 		for z := -viewDistance; z <= viewDistance; z++ {
 			// TODO: track chunk also needs chunks to be unloaded ...

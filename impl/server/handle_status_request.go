@@ -19,7 +19,7 @@ func (s *Server) handleStatusRequest() ([]byte, error) {
 			Text: "gogs - a blazingly fast minecraft server",
 		},
 		Players: players{
-			Max:    20,
+			Max:    int(s.MaxPlayers),
 			Online: len(s.playerMap.uuidToPlayer),
 			Sample: nil,
 		},
