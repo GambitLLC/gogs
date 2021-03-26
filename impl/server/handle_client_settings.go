@@ -65,7 +65,7 @@ func (s *Server) initialGameData(player *ecs.Player) []byte {
 			Name:           pk.String(p.Name),
 			NumProperties:  0,
 			Properties:     nil,
-			Gamemode:       0,
+			Gamemode:       pk.VarInt(p.GameMode),
 			Ping:           1,
 			HasDisplayName: false,
 			DisplayName:    "",

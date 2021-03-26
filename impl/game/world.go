@@ -8,6 +8,7 @@ import (
 )
 
 type World struct {
+	WorldName string
 	columnMap map[int]map[int]*column
 }
 
@@ -33,7 +34,7 @@ func (w *World) Column(x int, z int) *column {
 
 // loadRegion loads all chunks in the region into the mapping.
 func (w *World) loadRegion(regionX int, regionZ int) {
-	r, rErr := region.Open(fmt.Sprintf("./test_world/region/r.%d.%d.mca", regionX, regionZ))
+	r, rErr := region.Open(fmt.Sprintf("./%s/region/r.%d.%d.mca", w.WorldName, regionX, regionZ))
 	if rErr != nil {
 		// store empty columns if region file couldn't be opened
 		for x := 0; x < 32; x += 1 {

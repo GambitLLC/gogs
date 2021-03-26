@@ -2,8 +2,11 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"gogs/impl/ecs"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -22,8 +25,14 @@ type playerMapping struct {
 	connToPlayer map[gnet.Conn]*ecs.Player
 }
 
+type serverSettings struct {
+	WorldName string
+	GameMode  uint8
+}
+
 type Server struct {
 	gnet.EventServer
+	serverSettings
 
 	Host      string
 	Port      uint16
@@ -95,7 +104,7 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 			Inventory: make([]pk.Slot, 46), // https://wiki.vg/Inventory#Player_Inventory
 		},
 		SpawnPosition: spawnPos,
-		GameMode:      1,
+		GameMode:      s.GameMode,
 		UUID:          u,
 		Name:          name,
 	}
@@ -158,22 +167,64 @@ func (s *Server) broadcastPacket(pkt pk.Packet, exception gnet.Conn) {
 	s.playerMapMutex.RUnlock()
 }
 
-func (s *Server) Init() {
+func (s *Server) init() {
+	if err := s.loadSettings(); err != nil {
+		panic(err)
+	}
+
 	s.playerMap = &playerMapping{
 		uuidToPlayer: make(map[uuid.UUID]*ecs.Player),
 		connToPlayer: make(map[gnet.Conn]*ecs.Player),
 	}
 	s.entityMap = make(map[uint64]interface{})
 	// TODO: set up Server initialization (world, etc)
-	s.world = &game.World{}
+	s.world = &game.World{
+		WorldName: s.WorldName,
+	}
 
 	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
+}
+
+func (s *Server) loadSettings() error {
+	// default server settings
+	s.serverSettings = serverSettings{
+		WorldName: "test_world",
+		GameMode:  0,
+	}
+
+	// Open our jsonFile
+	jsonFile, err := os.Open("./settings.json")
+	if err != nil {
+		// create the settings file if it doesn't exist
+		jsonFile, err = os.Create("./settings.json")
+		if err != nil {
+			panic(err)
+		}
+		defer jsonFile.Close()
+
+		byteValue, err := json.Marshal(s.serverSettings)
+		if err != nil {
+			return err
+		}
+		_, err = jsonFile.Write(byteValue)
+		return err
+	}
+
+	defer jsonFile.Close()
+
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(byteValue, &s.serverSettings)
+	return err
 }
 
 //On Server Start - Ready to accept connections
 func (s *Server) OnInitComplete(_ gnet.Server) gnet.Action {
 	logger.Printf("gogs - a blazingly fast minecraft server")
-	s.Init()
+	s.init()
 	logger.Printf("Server listening for connections on tcp://" + s.Host + ":" + strconv.Itoa(int(s.Port)))
 	return gnet.None
 }
