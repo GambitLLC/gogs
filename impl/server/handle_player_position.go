@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"github.com/panjf2000/gnet"
+	"gogs/impl/ecs"
 	"gogs/impl/logger"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
@@ -28,22 +29,9 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 	s.broadcastPacket(outPacket, conn)
 
 	// TODO: according to wikivg, update view position is sent on change in Y coord as well
-	// TODO: update in player position rotation as well (change where this logic occurs ...)
 	// if chunk border was crossed, update view pos and send new chunks
-	chunkX := int(in.X) >> 4
-	chunkZ := int(in.Z) >> 4
-	if int(player.X)>>4 != chunkX || int(player.Z)>>4 != chunkZ {
-		buf := bytes.Buffer{}
-		buf.Write(clientbound.UpdateViewPosition{
-			ChunkX: pk.VarInt(chunkX),
-			ChunkZ: pk.VarInt(chunkZ),
-		}.CreatePacket().Encode())
-
-		// TODO: Add unload chunks for chunks out of range? not sure if needed
-		// TODO: optimize: just load the new chunks in the distance instead of sending all chunks nearby
-		buf.Write(s.chunkDataPackets(player))
-
-		out = buf.Bytes()
+	if int(player.X)>>4 != int(in.X)>>4 || int(player.Z)>>4 != int(in.Z)>>4 {
+		out = s.updateViewPosition(player)
 	}
 
 	// update player position
@@ -52,4 +40,27 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 	player.Z = float64(in.Z)
 
 	return
+}
+
+func (s *Server) updateViewPosition(player *ecs.Player) []byte {
+	buf := bytes.Buffer{}
+	buf.Write(clientbound.UpdateViewPosition{
+		ChunkX: pk.VarInt(int(player.X) >> 4),
+		ChunkZ: pk.VarInt(int(player.Z) >> 4),
+	}.CreatePacket().Encode())
+
+	chunkX := int(player.X) >> 4
+	chunkZ := int(player.Z) >> 4
+
+	viewDistance := int(player.ViewDistance)
+	for x := -viewDistance; x <= viewDistance; x++ {
+		for z := -viewDistance; z <= viewDistance; z++ {
+			buf.Write(s.chunkDataPacket(chunkX+x, chunkZ+z))
+		}
+	}
+
+	// TODO: only send new chunks and unload old chunks
+	// maybe the issue is with gnet? try sending chunks individually rather than all together somehow (asyncwrite hangs)
+
+	return buf.Bytes()
 }

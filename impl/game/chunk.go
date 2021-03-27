@@ -8,6 +8,7 @@ import (
 	"github.com/Tnze/go-mc/nbt"
 	"io"
 	"math"
+	"sync"
 )
 
 type column struct {
@@ -15,9 +16,14 @@ type column struct {
 	Z             int
 	Sections      [16]*chunkSection
 	BlockEntities []blockEntity
+
+	Lock sync.RWMutex
 }
 
 func (c *column) SetBlock(x int, y int, z int, blockID int32) {
+	c.Lock.Lock()
+	defer c.Lock.Unlock()
+
 	sectionY := y >> 4
 	if c.Sections[sectionY] == nil {
 		c.Sections[sectionY] = &chunkSection{

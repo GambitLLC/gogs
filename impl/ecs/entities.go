@@ -44,26 +44,6 @@ type Player struct {
 
 	PaintingLock  sync.RWMutex
 	PaintingSlots []uint8
-
-	chunkManager map[int]map[int]struct{}
-}
-
-// TrackChunk marks a chunk as loaded and returns whether or not it was previously loaded
-func (p *Player) TrackChunk(x int, z int) bool {
-	if p.chunkManager == nil {
-		p.chunkManager = make(map[int]map[int]struct{})
-	}
-
-	if p.chunkManager[x] == nil {
-		p.chunkManager[x] = make(map[int]struct{})
-	}
-
-	_, exists := p.chunkManager[x][z]
-	if !exists {
-		p.chunkManager[x][z] = struct{}{}
-	}
-
-	return exists
 }
 
 type ItemEntity struct {

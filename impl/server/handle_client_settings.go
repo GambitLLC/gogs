@@ -85,7 +85,16 @@ func (s *Server) initialGameData(player *ecs.Player) []byte {
 		ChunkZ: pk.VarInt(int32(player.Z) >> 4),
 	}.CreatePacket().Encode())
 
-	buf.Write(s.chunkDataPackets(player))
+	// send initial chunks
+	chunkX := int(player.X) >> 4
+	chunkZ := int(player.Z) >> 4
+
+	viewDistance := int(player.ViewDistance)
+	for x := -viewDistance; x <= viewDistance; x++ {
+		for z := -viewDistance; z <= viewDistance; z++ {
+			buf.Write(s.chunkDataPacket(chunkX+x, chunkZ+z))
+		}
+	}
 
 	buf.Write(clientbound.SpawnPosition{Location: pk.Position{
 		X: int32(player.SpawnPosition.X),
@@ -135,105 +144,66 @@ func (s *Server) initialGameData(player *ecs.Player) []byte {
 	return buf.Bytes()
 }
 
-func (s *Server) chunkDataPackets(player *ecs.Player) []byte {
-	buf := bytes.Buffer{}
+func (s *Server) chunkDataPacket(x int, z int) []byte {
+	column := s.world.Column(x, z)
 
-	biomes := make([]pk.VarInt, 1024)
-	motionBlocking := make([]int64, 37)
+	column.Lock.RLock()
+	defer column.Lock.RUnlock()
 
-	chunkX := int(player.X) >> 4
-	chunkZ := int(player.Z) >> 4
+	var chunkDataArray clientbound.ChunkDataArray
+	chunkDataArray = make(clientbound.ChunkDataArray, 0, 16)
 
-	viewDistance := int(player.ViewDistance)
-
-	for x := -viewDistance; x <= viewDistance; x++ {
-		for z := -viewDistance; z <= viewDistance; z++ {
-			// TODO: track chunk also needs chunks to be unloaded ...
-			//if player.TrackChunk(x+chunkX, z+chunkZ) {
-			//	continue
-			//}
-
-			column := s.world.Column(x+chunkX, z+chunkZ)
-
-			var chunkDataArray clientbound.ChunkDataArray
-			chunkDataArray = make(clientbound.ChunkDataArray, 0, 16)
-
-			bitMask := 0
-			for _, section := range column.Sections {
-				if section == nil {
-					continue
-				}
-				bitMask |= 1 << section.Y
-
-				palette := make([]pk.VarInt, len(section.Palette))
-				for i, blockID := range section.Palette {
-					palette[i] = pk.VarInt(blockID)
-				}
-
-				blockData := make([]pk.Long, len(section.BlockStates.Data))
-				for i, blockState := range section.BlockStates.Data {
-					blockData[i] = pk.Long(blockState)
-				}
-				chunkDataArray = append(chunkDataArray, clientbound.ChunkSection{
-					BlockCount:   4096,
-					BitsPerBlock: pk.UByte(section.BlockStates.BitsPerValue),
-					Palette: clientbound.ChunkPalette{
-						Length:  pk.VarInt(len(palette)),
-						Palette: palette,
-					},
-					DataArrayLength: pk.VarInt(len(blockData)),
-					DataArray:       blockData,
-				})
-			}
-
-			blockEntities := make([]pk.NBT, len(column.BlockEntities))
-			for i, v := range column.BlockEntities {
-				blockEntities[i] = pk.NBT{V: v}
-			}
-
-			chunk := clientbound.ChunkData{
-				ChunkX:         pk.Int(x + chunkX),
-				ChunkZ:         pk.Int(z + chunkZ),
-				FullChunk:      true,
-				PrimaryBitMask: pk.VarInt(bitMask),
-				Heightmaps: pk.NBT{
-					V: clientbound.Heightmap{
-						MotionBlocking: motionBlocking,
-						//WorldSurface:   motion_blocking,
-					},
-				},
-				BiomesLength:     pk.VarInt(len(biomes)),
-				Biomes:           biomes,
-				Size:             pk.VarInt(len(chunkDataArray.Encode())),
-				Data:             chunkDataArray,
-				NumBlockEntities: pk.VarInt(len(blockEntities)),
-				BlockEntities:    blockEntities,
-			}.CreatePacket().Encode()
-			buf.Write(chunk)
-
-			//temp := make([]byte, 2048)
-			//for i := range temp {
-			//	temp[i] = 255
-			//}
-			//
-			//updateLight := clientbound.UpdateLight{
-			//	ChunkX:         pk.VarInt(x + chunkX),
-			//	ChunkZ:         pk.VarInt(z + chunkZ),
-			//	TrustEdges:          false,
-			//	SkyLightMask:        0,
-			//	BlockLightMask:      1 << 5,
-			//	EmptySkyLightMask:   0,
-			//	EmptyBlockLightMask: 0,
-			//	SkyLightArrays:      clientbound.SkyLight{
-			//	},
-			//	BlockLightArrays:    clientbound.BlockLight{
-			//		Arrays: []pk.ByteArray{
-			//			temp,
-			//		},
-			//	},
-			//}
-			//buf.Write(updateLight.CreatePacket().Encode())
+	bitMask := 0
+	for _, section := range column.Sections {
+		if section == nil {
+			continue
 		}
+		bitMask |= 1 << section.Y
+
+		palette := make([]pk.VarInt, len(section.Palette))
+		for i, blockID := range section.Palette {
+			palette[i] = pk.VarInt(blockID)
+		}
+
+		blockData := make([]pk.Long, len(section.BlockStates.Data))
+		for i, blockState := range section.BlockStates.Data {
+			blockData[i] = pk.Long(blockState)
+		}
+		chunkDataArray = append(chunkDataArray, clientbound.ChunkSection{
+			BlockCount:   4096,
+			BitsPerBlock: pk.UByte(section.BlockStates.BitsPerValue),
+			Palette: clientbound.ChunkPalette{
+				Length:  pk.VarInt(len(palette)),
+				Palette: palette,
+			},
+			DataArrayLength: pk.VarInt(len(blockData)),
+			DataArray:       blockData,
+		})
 	}
-	return buf.Bytes()
+
+	blockEntities := make([]pk.NBT, len(column.BlockEntities))
+	for i, v := range column.BlockEntities {
+		blockEntities[i] = pk.NBT{V: v}
+	}
+
+	chunk := clientbound.ChunkData{
+		ChunkX:         pk.Int(x),
+		ChunkZ:         pk.Int(z),
+		FullChunk:      true,
+		PrimaryBitMask: pk.VarInt(bitMask),
+		Heightmaps: pk.NBT{
+			V: clientbound.Heightmap{
+				MotionBlocking: make([]int64, 37),
+				//WorldSurface:   motion_blocking,
+			},
+		},
+		BiomesLength:     1024,
+		Biomes:           make([]pk.VarInt, 1024),
+		Size:             pk.VarInt(len(chunkDataArray.Encode())),
+		Data:             chunkDataArray,
+		NumBlockEntities: pk.VarInt(len(blockEntities)),
+		BlockEntities:    blockEntities,
+	}.CreatePacket().Encode()
+
+	return chunk
 }
