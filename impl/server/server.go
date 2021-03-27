@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"gogs/impl/data"
 	"gogs/impl/ecs"
 	"io/ioutil"
 	"os"
@@ -97,7 +98,7 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 		Z: 0,
 	}
 	player = &ecs.Player{
-		BasicEntity:         ecs.NewEntity(),
+		BasicEntity:         ecs.NewEntity(data.ProtocolID("minecraft:entity_type", "minecraft:player")),
 		PositionComponent:   spawnPos,
 		HealthComponent:     ecs.HealthComponent{Health: 20},
 		FoodComponent:       ecs.FoodComponent{Food: 20, Saturation: 0},

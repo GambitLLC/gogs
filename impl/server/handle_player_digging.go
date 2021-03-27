@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/panjf2000/gnet"
+	"gogs/impl/data"
 	"gogs/impl/ecs"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
@@ -43,7 +44,7 @@ func (s *Server) handlePlayerDigging(conn gnet.Conn, pkt pk.Packet) (out []byte,
 
 func (s *Server) spawnItem(item pk.Slot, location ecs.PositionComponent) {
 	itemEntity := ecs.ItemEntity{
-		BasicEntity:       ecs.NewEntity(),
+		BasicEntity:       ecs.NewEntity(data.ProtocolID("minecraft:entity_type", "minecraft:item")),
 		PositionComponent: location,
 		VelocityComponent: ecs.VelocityComponent{},
 		Item:              item,
