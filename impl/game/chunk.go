@@ -6,6 +6,7 @@ import (
 	"compress/zlib"
 	"errors"
 	"github.com/Tnze/go-mc/nbt"
+	"gogs/impl/logger"
 	"io"
 	"math"
 	"sync"
@@ -20,6 +21,28 @@ type column struct {
 	Lock sync.RWMutex
 }
 
+// Block returns the block at the given global x, y, z. Does not check if x & z fall within the column.
+func (c *column) Block(x int, y int, z int) (blockID int32) {
+	c.Lock.RLock()
+	defer c.Lock.RUnlock()
+
+	sectionY := y >> 4
+	if c.Sections[sectionY] == nil {
+		return 0
+	}
+
+	sectionX := x % 16
+	if sectionX < 0 {
+		sectionX += 16
+	}
+	sectionZ := z % 16
+	if sectionZ < 0 {
+		sectionZ += 16
+	}
+	return c.Sections[sectionY].Block(sectionX, y%16, sectionZ)
+}
+
+// SetBlock sets the block at the given global x, y, z. Does not check if x & z fall within the column.
 func (c *column) SetBlock(x int, y int, z int, blockID int32) {
 	c.Lock.Lock()
 	defer c.Lock.Unlock()
@@ -51,6 +74,22 @@ type chunkSection struct {
 	paletteMap  map[int32]uint8 // map of global palette id to palette index
 }
 
+// Block returns the block id at the given chunk x, chunk y, and chunk z.
+func (s *chunkSection) Block(x int, y int, z int) (blockID int32) {
+	if s.Palette == nil {
+		return 0
+	}
+
+	paletteIndex := s.BlockStates.get(256*y + 16*z + x)
+	if int(paletteIndex) >= len(s.Palette) {
+		logger.Printf("paletteIndex received was greater than palette size somehow ...")
+		return 0
+	}
+
+	return s.Palette[paletteIndex]
+}
+
+// SetBlock sets the block at the given chunk x, chunk y, and chunk z.
 func (s *chunkSection) SetBlock(x int, y int, z int, blockID int32) {
 	if s.paletteMap == nil {
 		s.paletteMap = make(map[int32]uint8, 16)

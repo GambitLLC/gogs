@@ -33,18 +33,20 @@ func (s *Server) handlePlayerBlockPlacement(conn gnet.Conn, pkt pk.Packet) (out 
 	// TODO: determine block id from player inventory
 	player := s.playerFromConn(conn)
 
-	player.InventoryLock.Lock()
-	defer player.InventoryLock.Unlock()
-
+	player.InventoryLock.RLock()
 	itemID := data.NamespacedID("minecraft:item", int32(player.Inventory[player.HeldItem+36].ItemID))
+	player.InventoryLock.RUnlock()
 	blockID := data.BlockStateID(itemID, nil)
 
 	if blockID != 0 {
+		player.InventoryLock.Lock()
 		player.Inventory[player.HeldItem+36].ItemCount -= 1
 		if player.Inventory[player.HeldItem+36].ItemCount == 0 {
 			player.Inventory[player.HeldItem+36].Present = false
 			player.Inventory[player.HeldItem+36].ItemID = 0
 		}
+		player.InventoryLock.Unlock()
+
 		s.world.SetBlock(newX, newY, newZ, blockID)
 
 		out = clientbound.BlockChange{
@@ -64,11 +66,13 @@ func (s *Server) handlePlayerBlockPlacement(conn gnet.Conn, pkt pk.Packet) (out 
 		s.playerMapMutex.RUnlock()
 
 		// send out updated item count
+		player.InventoryLock.RLock()
 		out = clientbound.SetSlot{
 			WindowID: 0,
 			Slot:     pk.Short(player.HeldItem + 36),
 			SlotData: player.Inventory[player.HeldItem+36],
 		}.CreatePacket().Encode()
+		player.InventoryLock.RUnlock()
 	}
 
 	return

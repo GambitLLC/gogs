@@ -2,7 +2,6 @@ package game
 
 import (
 	"fmt"
-	"github.com/Tnze/go-mc/save/region"
 	"gogs/impl/data"
 	"math"
 )
@@ -12,10 +11,17 @@ type World struct {
 	columnMap map[int]map[int]*column
 }
 
+// Block returns the block at the given global x, y, and z.
+func (w *World) Block(x int, y int, z int) int32 {
+	return w.Column(x>>4, z>>4).Block(x, y, z)
+}
+
+// SetBlock sets a block at the given global x, y, and z.
 func (w *World) SetBlock(x int, y int, z int, blockID int32) {
 	w.Column(x>>4, z>>4).SetBlock(x, y, z, blockID)
 }
 
+// Column returns the column with the given column x and column z.
 func (w *World) Column(x int, z int) *column {
 	if w.columnMap == nil {
 		w.columnMap = make(map[int]map[int]*column)
@@ -34,7 +40,7 @@ func (w *World) Column(x int, z int) *column {
 
 // loadRegion loads all chunks in the region into the mapping.
 func (w *World) loadRegion(regionX int, regionZ int) {
-	r, rErr := region.Open(fmt.Sprintf("./%s/region/r.%d.%d.mca", w.WorldName, regionX, regionZ))
+	r, rErr := Open(fmt.Sprintf("./%s/region/r.%d.%d.mca", w.WorldName, regionX, regionZ))
 	if rErr != nil {
 		// store empty columns if region file couldn't be opened
 		for x := 0; x < 32; x += 1 {
@@ -44,7 +50,6 @@ func (w *World) loadRegion(regionX int, regionZ int) {
 		}
 		return
 	}
-	defer r.Close()
 
 	for x := 0; x < 32; x += 1 {
 		for z := 0; z < 32; z += 1 {
@@ -64,8 +69,11 @@ func (w *World) loadRegion(regionX int, regionZ int) {
 			w.storeColumn(regionX<<5+x, regionZ<<5+z, &c)
 		}
 	}
+
+	_ = r.Close()
 }
 
+// storeColumn creates a column from the given anvilColumn and stores it in the column map.
 func (w *World) storeColumn(x int, z int, c *anvilColumn) {
 	val := column{
 		X:        x,
