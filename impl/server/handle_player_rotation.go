@@ -8,7 +8,7 @@ import (
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handlePlayerRotation(conn net.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handlePlayerRotation(conn net.Conn, pkt pk.Packet) (err error) {
 	player := s.playerFromConn(conn)
 	logger.Printf("Received player rotation for %s", player.Name)
 

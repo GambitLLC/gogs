@@ -10,7 +10,7 @@ import (
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handleChatMessage(conn net.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handleChatMessage(conn net.Conn, pkt pk.Packet) (err error) {
 	m := serverbound.ChatMessage{}
 	if err = m.FromPacket(pkt); err != nil {
 		return

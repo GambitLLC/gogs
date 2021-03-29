@@ -178,34 +178,29 @@ func (s *Server) handlePlay(conn net.Conn) (err error) {
 		case packetids.TeleportConfirm:
 			// TODO: Handle this
 			logger.Printf("Received teleport confirm")
-			/*
-				case packetids.ChatMessageServerbound:
-					return s.handleChatMessage(conn, pkt)
-				case packetids.ClientSettings:
-					return s.handleClientSettings(conn, pkt)
-				case packetids.PlayerPosition:
-					// TODO: Handle all player pos & rotation packets
-					return s.handlePlayerPosition(conn, pkt)
-				case packetids.PlayerPositionAndRotationServerbound:
-					return s.handlePlayerPositionAndRotation(conn, pkt)
-				case packetids.PlayerRotation:
-					return s.handlePlayerRotation(conn, pkt)
-				case packetids.Animation:
-					return s.handleAnimation(conn, pkt)
-				case packetids.EntityAction:
-					return s.handleEntityAction(conn, pkt)
-				case packetids.InteractEntity:
-					return s.handleInteractEntity(conn, pkt)
-				case packetids.ClientStatus:
-					return s.handleClientStatus(conn, pkt)
-				case packetids.ClickWindow:
-					return s.handleClickWindow(conn, pkt)
-				case packetids.PlayerDigging:
-					return s.handlePlayerDigging(conn, pkt)
-				case packetids.PlayerBlockPlacement:
-					return s.handlePlayerBlockPlacement(conn, pkt)
-
-			*/
+		case packetids.ChatMessageServerbound:
+			err = s.handleChatMessage(conn, pkt)
+		case packetids.PlayerPosition:
+			// TODO: Handle all player pos & rotation packets
+			err = s.handlePlayerPosition(conn, pkt)
+		case packetids.PlayerPositionAndRotationServerbound:
+			err = s.handlePlayerPositionAndRotation(conn, pkt)
+		case packetids.PlayerRotation:
+			err = s.handlePlayerRotation(conn, pkt)
+		case packetids.Animation:
+			err = s.handleAnimation(conn, pkt)
+		case packetids.EntityAction:
+			err = s.handleEntityAction(conn, pkt)
+		case packetids.InteractEntity:
+			err = s.handleInteractEntity(conn, pkt)
+		case packetids.ClientStatus:
+			err = s.handleClientStatus(conn, pkt)
+		case packetids.ClickWindow:
+			err = s.handleClickWindow(conn, pkt)
+		case packetids.PlayerDigging:
+			err = s.handlePlayerDigging(conn, pkt)
+		case packetids.PlayerBlockPlacement:
+			err = s.handlePlayerBlockPlacement(conn, pkt)
 		case packetids.HeldItemChangeServerbound:
 			var slot pk.Short
 			if err = pkt.Unmarshal(&slot); err != nil {

@@ -11,7 +11,7 @@ import (
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handleInteractEntity(conn net.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handleInteractEntity(conn net.Conn, pkt pk.Packet) (err error) {
 	in := serverbound.InteractEntity{}
 	if err = in.FromPacket(pkt); err != nil {
 		return

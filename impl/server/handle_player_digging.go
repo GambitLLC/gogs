@@ -9,7 +9,7 @@ import (
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handlePlayerDigging(conn net.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handlePlayerDigging(conn net.Conn, pkt pk.Packet) (err error) {
 	in := serverbound.PlayerDigging{}
 	if err = in.FromPacket(pkt); err != nil {
 		return

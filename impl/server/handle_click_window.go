@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"gogs/impl/logger"
 	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
@@ -10,7 +9,7 @@ import (
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handleClickWindow(conn net.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handleClickWindow(conn net.Conn, pkt pk.Packet) (err error) {
 	in := serverbound.ClickWindow{}
 	if err = in.FromPacket(pkt); err != nil {
 		return
@@ -242,35 +241,43 @@ func (s *Server) handleClickWindow(conn net.Conn, pkt pk.Packet) (out []byte, er
 		}
 	}
 
-	buf := bytes.Buffer{}
-	buf.Write(pk.Marshal(
+	if err = conn.WritePacket(pk.Marshal(
 		packetids.WindowConfirmationClientbound,
 		in.WindowID,
 		in.ActionNumber,
 		pk.Boolean(!rejected), // accepted
-	).Encode())
+	)); err != nil {
+		return
+	}
 
 	if rejected {
-		buf.Write(clientbound.WindowItems{
+		if err = conn.WritePacket(clientbound.WindowItems{
 			WindowID: in.WindowID,
 			Count:    pk.Short(len(window.Inventory)),
 			SlotData: window.Inventory,
-		}.CreatePacket().Encode())
+		}.CreatePacket()); err != nil {
+			return
+		}
+
 		if slot != -999 {
-			buf.Write(clientbound.SetSlot{
+			if err = conn.WritePacket(clientbound.SetSlot{
 				WindowID: 0,
 				Slot:     in.Slot,
 				SlotData: window.Inventory[slot],
-			}.CreatePacket().Encode())
+			}.CreatePacket()); err != nil {
+				return
+			}
 		}
-		buf.Write(clientbound.SetSlot{
+
+		if err = conn.WritePacket(clientbound.SetSlot{
 			WindowID: -1,
 			Slot:     -1,
 			SlotData: player.HeldSlot,
-		}.CreatePacket().Encode())
+		}.CreatePacket()); err != nil {
+			return
+		}
 	}
 
-	out = buf.Bytes()
 	return
 }
 
