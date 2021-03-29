@@ -64,6 +64,44 @@ func (s *Server) init() {
 	}
 }
 
+func (s *Server) loadSettings() error {
+	// default server settings
+	s.serverSettings = serverSettings{
+		WorldName:    "test_world",
+		GameMode:     0,
+		ViewDistance: 10,
+		MaxPlayers:   20,
+	}
+
+	// Open our jsonFile
+	jsonFile, err := os.Open("./settings.json")
+	if err != nil {
+		// create the settings file if it doesn't exist
+		jsonFile, err = os.Create("./settings.json")
+		if err != nil {
+			panic(err)
+		}
+		defer jsonFile.Close()
+
+		byteValue, err := json.Marshal(s.serverSettings)
+		if err != nil {
+			return err
+		}
+		_, err = jsonFile.Write(byteValue)
+		return err
+	}
+
+	defer jsonFile.Close()
+
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(byteValue, &s.serverSettings)
+	return err
+}
+
 func (s *Server) listen() error {
 	l, err := net.NewListener(s.Host, int(s.Port))
 	if err != nil {
@@ -80,19 +118,6 @@ func (s *Server) listen() error {
 
 		go s.handleHandshake(conn)
 	}
-}
-
-func (s *Server) Broadcast(text string) {
-	// TODO: figure out chat colors
-	logger.Printf(text)
-	msg := chat.NewMessage("§e" + text)
-	pkt := clientbound.ChatMessage{
-		JSONData: pk.Chat(msg.AsJSON()),
-		Position: 1, // TODO: define chat positions as enum
-		Sender:   pk.UUID{},
-	}.CreatePacket()
-
-	s.broadcastPacket(pkt, nil)
 }
 
 func (s *Server) createPlayer(name string, u uuid.UUID, conn net.Conn) *ecs.Player {
@@ -174,6 +199,19 @@ func (s *Server) playerFromEntityID(id uint64) *ecs.Player {
 	return nil
 }
 
+func (s *Server) Broadcast(text string) {
+	// TODO: figure out chat colors
+	logger.Printf(text)
+	msg := chat.NewMessage("§e" + text)
+	pkt := clientbound.ChatMessage{
+		JSONData: pk.Chat(msg.AsJSON()),
+		Position: 1, // TODO: define chat positions as enum
+		Sender:   pk.UUID{},
+	}.CreatePacket()
+
+	s.broadcastPacket(pkt, nil)
+}
+
 func (s *Server) broadcastPacket(pkt pk.Packet, exception net.Conn) {
 	s.playerMap.Lock.RLock()
 	for conn := range s.playerMap.connToPlayer {
@@ -183,136 +221,3 @@ func (s *Server) broadcastPacket(pkt pk.Packet, exception net.Conn) {
 	}
 	s.playerMap.Lock.RUnlock()
 }
-
-func (s *Server) loadSettings() error {
-	// default server settings
-	s.serverSettings = serverSettings{
-		WorldName:    "test_world",
-		GameMode:     0,
-		ViewDistance: 10,
-		MaxPlayers:   20,
-	}
-
-	// Open our jsonFile
-	jsonFile, err := os.Open("./settings.json")
-	if err != nil {
-		// create the settings file if it doesn't exist
-		jsonFile, err = os.Create("./settings.json")
-		if err != nil {
-			panic(err)
-		}
-		defer jsonFile.Close()
-
-		byteValue, err := json.Marshal(s.serverSettings)
-		if err != nil {
-			return err
-		}
-		_, err = jsonFile.Write(byteValue)
-		return err
-	}
-
-	defer jsonFile.Close()
-
-	byteValue, err := ioutil.ReadAll(jsonFile)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(byteValue, &s.serverSettings)
-	return err
-}
-
-/*
-//On Connection Closed - A connection has been closed
-func (s *Server) OnClosed(conn gnet.Conn, _ error) gnet.Action {
-	logger.Printf("Connection closed")
-
-	//clean up all the player state
-	s.playerMap.Lock.RLock()
-	player, exists := s.playerMap.connToPlayer[conn]
-	s.playerMap.Lock.RUnlock()
-
-	if exists {
-		s.playerMap.Lock.Lock()
-		delete(s.playerMap.connToPlayer, conn)
-		s.playerMap.Lock.Unlock()
-
-		player.Connection = nil
-		player.Online = false
-
-		logger.Printf("Player %v disconnected", player.Name)
-
-		// update player info for all remaining players
-		playerInfoPacket := clientbound.PlayerInfo{
-			Action:     4, // TODO: create consts for action
-			NumPlayers: 1,
-			Players: []pk.Encodable{
-				clientbound.PlayerInfoRemovePlayer{
-					UUID: pk.UUID(player.UUID),
-				},
-			},
-		}.CreatePacket().Encode()
-		// also destroy the entity for all players
-		destroyEntitiesPacket := clientbound.DestroyEntities{
-			Count:     1,
-			EntityIDs: []pk.VarInt{pk.VarInt(player.ID())},
-		}.CreatePacket().Encode()
-
-		s.playerMap.Lock.RLock()
-		for c := range s.playerMap.connToPlayer {
-			_ = c.AsyncWrite(append(playerInfoPacket, destroyEntitiesPacket...))
-		}
-		s.playerMap.Lock.RUnlock()
-
-		// TODO: trigger disconnect event
-		s.Broadcast(fmt.Sprintf("%v has left the game", player.Name))
-		return gnet.None
-	}
-
-	return gnet.None
-}
-
-//On packet
-func (s *Server) React(frame []byte, c gnet.Conn) ([]byte, gnet.Action) {
-	out := bytes.Buffer{}
-	for buf := bytes.NewReader(frame); buf.Len() > 0; {
-		packet, err := pk.Decode(buf)
-		if err != nil {
-			logger.Printf("error decoding frame into packet: %v", err)
-			return nil, gnet.None
-		}
-
-		res, err := s.handlePacket(c, *packet)
-		if err != nil {
-			logger.Printf("failed to handle packet %v\n got error: %v", packet, err.Error())
-			return nil, gnet.None
-		}
-		out.Write(res)
-	}
-
-	return out.Bytes(), gnet.None
-}
-
-//On tick
-func (s *Server) Tick() (delay time.Duration, action gnet.Action) {
-	if s.shuttingDown {
-		return 0, gnet.Shutdown
-	}
-
-	startTime := time.Now()
-	// TODO: probably game logic stuff
-	if s.tickCount%100 == 0 {
-		//send out keep-alive to all players
-		pkt := clientbound.KeepAlive{
-			ID: pk.Long(time.Now().UnixNano()),
-		}.CreatePacket()
-		s.broadcastPacket(pkt, nil)
-	}
-
-	s.tickCount++
-	// tick every 50 ms (20 tps)
-	return time.Duration(50000000 - time.Since(startTime).Nanoseconds()), gnet.None
-}
-
-
-*/
