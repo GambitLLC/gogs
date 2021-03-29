@@ -1,7 +1,7 @@
 package events
 
 import (
-	"github.com/panjf2000/gnet"
+	"gogs/impl/net"
 )
 
 type PlayerLoginResult int8
@@ -19,7 +19,7 @@ var PlayerLoginEvent playerLoginEvent
 
 type PlayerLoginData struct {
 	Name        string
-	Conn        gnet.Conn
+	Conn        net.Conn
 	Result      PlayerLoginResult
 	KickMessage string
 }

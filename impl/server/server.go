@@ -1,29 +1,26 @@
 package server
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
+	"github.com/google/uuid"
+	"gogs/api/data/chat"
 	"gogs/impl/data"
 	"gogs/impl/ecs"
-	"io/ioutil"
-	"os"
-	"strconv"
-	"sync"
-	"time"
-
-	"github.com/google/uuid"
-	"github.com/panjf2000/gnet"
-	"gogs/api/data/chat"
 	"gogs/impl/game"
 	"gogs/impl/logger"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
+	"io/ioutil"
+	"log"
+	"os"
+	"sync"
 )
 
 type playerMapping struct {
+	Lock         sync.RWMutex
 	uuidToPlayer map[uuid.UUID]*ecs.Player
-	connToPlayer map[gnet.Conn]*ecs.Player
+	connToPlayer map[net.Conn]*ecs.Player
 }
 
 type serverSettings struct {
@@ -34,7 +31,6 @@ type serverSettings struct {
 }
 
 type Server struct {
-	gnet.EventServer
 	serverSettings
 
 	Host         string
@@ -42,31 +38,49 @@ type Server struct {
 	tickCount    uint64
 	shuttingDown bool
 
-	playerMapMutex sync.RWMutex
-	playerMap      *playerMapping
-	entityMap      map[uint64]interface{}
-	world          *game.World
+	playerMap *playerMapping
+	entityMap map[uint64]interface{}
+	world     *game.World
 }
 
-/*
-func (s *Server) Players() []api.Player {
-	s.playerMapMutex.RLock()
-	defer s.playerMapMutex.RUnlock()
+func (s *Server) Start() error {
+	s.init()
+	return s.listen()
+}
 
-	players := make([]api.Player, 0, len(s.playerMap.uuidToPlayer))
-	for _, player := range s.playerMap.uuidToPlayer {
-		players = append(players, player)
+func (s *Server) init() {
+	if err := s.loadSettings(); err != nil {
+		panic(err)
 	}
-	return players
+
+	s.playerMap = &playerMapping{
+		uuidToPlayer: make(map[uuid.UUID]*ecs.Player),
+		connToPlayer: make(map[net.Conn]*ecs.Player),
+	}
+	s.entityMap = make(map[uint64]interface{})
+
+	s.world = &game.World{
+		WorldName: s.WorldName,
+	}
 }
 
-func (s *Server) PlayerFromUUID(uuid uuid.UUID) api.Player {
-	s.playerMapMutex.RLock()
-	defer s.playerMapMutex.RUnlock()
+func (s *Server) listen() error {
+	l, err := net.NewListener(s.Host, int(s.Port))
+	if err != nil {
+		return err
+	}
 
-	return s.playerMap.uuidToPlayer[uuid]
+	log.Printf("Server listening for connections on tcp://%s:%d", s.Host, s.Port)
+
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			return err
+		}
+
+		go s.handleHandshake(conn)
+	}
 }
-*/
 
 func (s *Server) Broadcast(text string) {
 	// TODO: figure out chat colors
@@ -81,9 +95,9 @@ func (s *Server) Broadcast(text string) {
 	s.broadcastPacket(pkt, nil)
 }
 
-func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Player {
-	s.playerMapMutex.Lock()
-	defer s.playerMapMutex.Unlock()
+func (s *Server) createPlayer(name string, u uuid.UUID, conn net.Conn) *ecs.Player {
+	s.playerMap.Lock.Lock()
+	defer s.playerMap.Lock.Unlock()
 
 	player, exists := s.playerMap.uuidToPlayer[u]
 	if exists {
@@ -139,9 +153,9 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn gnet.Conn) *ecs.Pla
 	return player
 }
 
-func (s *Server) playerFromConn(conn gnet.Conn) *ecs.Player {
-	s.playerMapMutex.RLock()
-	defer s.playerMapMutex.RUnlock()
+func (s *Server) playerFromConn(conn net.Conn) *ecs.Player {
+	s.playerMap.Lock.RLock()
+	defer s.playerMap.Lock.RUnlock()
 
 	return s.playerMap.connToPlayer[conn]
 }
@@ -149,8 +163,8 @@ func (s *Server) playerFromConn(conn gnet.Conn) *ecs.Player {
 func (s *Server) playerFromEntityID(id uint64) *ecs.Player {
 	// todo: consider creating a map
 	// todo: should be getEntity() and not just for players
-	s.playerMapMutex.RLock()
-	defer s.playerMapMutex.RUnlock()
+	s.playerMap.Lock.RLock()
+	defer s.playerMap.Lock.RUnlock()
 
 	for _, p := range s.playerMap.uuidToPlayer {
 		if p.ID() == id {
@@ -160,33 +174,14 @@ func (s *Server) playerFromEntityID(id uint64) *ecs.Player {
 	return nil
 }
 
-func (s *Server) broadcastPacket(pkt pk.Packet, exception gnet.Conn) {
-	out := pkt.Encode()
-	s.playerMapMutex.RLock()
+func (s *Server) broadcastPacket(pkt pk.Packet, exception net.Conn) {
+	s.playerMap.Lock.RLock()
 	for conn := range s.playerMap.connToPlayer {
 		if conn != exception {
-			_ = conn.AsyncWrite(out)
+			_ = conn.WritePacket(pkt)
 		}
 	}
-	s.playerMapMutex.RUnlock()
-}
-
-func (s *Server) init() {
-	if err := s.loadSettings(); err != nil {
-		panic(err)
-	}
-
-	s.playerMap = &playerMapping{
-		uuidToPlayer: make(map[uuid.UUID]*ecs.Player),
-		connToPlayer: make(map[gnet.Conn]*ecs.Player),
-	}
-	s.entityMap = make(map[uint64]interface{})
-	// TODO: set up Server initialization (world, etc)
-	s.world = &game.World{
-		WorldName: s.WorldName,
-	}
-
-	// TODO: PlayerLoginEvent should check if players banned/whitelisted first
+	s.playerMap.Lock.RUnlock()
 }
 
 func (s *Server) loadSettings() error {
@@ -227,39 +222,20 @@ func (s *Server) loadSettings() error {
 	return err
 }
 
-//On Server Start - Ready to accept connections
-func (s *Server) OnInitComplete(_ gnet.Server) gnet.Action {
-	logger.Printf("gogs - a blazingly fast minecraft server")
-	s.init()
-	logger.Printf("Server listening for connections on tcp://" + s.Host + ":" + strconv.Itoa(int(s.Port)))
-	return gnet.None
-}
-
-//On Server End - Event loop and all connections closed
-func (s *Server) OnShutdown(_ gnet.Server) {
-	logger.Printf("Server shutting down")
-}
-
-//On Connection Opened - Player either logging in or getting status
-func (s *Server) OnOpened(c gnet.Conn) (out []byte, action gnet.Action) {
-	logger.Printf("New connection received")
-	c.SetContext(connectionContext{State: handshakeState})
-	return nil, gnet.None
-}
-
+/*
 //On Connection Closed - A connection has been closed
 func (s *Server) OnClosed(conn gnet.Conn, _ error) gnet.Action {
 	logger.Printf("Connection closed")
 
 	//clean up all the player state
-	s.playerMapMutex.RLock()
+	s.playerMap.Lock.RLock()
 	player, exists := s.playerMap.connToPlayer[conn]
-	s.playerMapMutex.RUnlock()
+	s.playerMap.Lock.RUnlock()
 
 	if exists {
-		s.playerMapMutex.Lock()
+		s.playerMap.Lock.Lock()
 		delete(s.playerMap.connToPlayer, conn)
-		s.playerMapMutex.Unlock()
+		s.playerMap.Lock.Unlock()
 
 		player.Connection = nil
 		player.Online = false
@@ -282,11 +258,11 @@ func (s *Server) OnClosed(conn gnet.Conn, _ error) gnet.Action {
 			EntityIDs: []pk.VarInt{pk.VarInt(player.ID())},
 		}.CreatePacket().Encode()
 
-		s.playerMapMutex.RLock()
+		s.playerMap.Lock.RLock()
 		for c := range s.playerMap.connToPlayer {
 			_ = c.AsyncWrite(append(playerInfoPacket, destroyEntitiesPacket...))
 		}
-		s.playerMapMutex.RUnlock()
+		s.playerMap.Lock.RUnlock()
 
 		// TODO: trigger disconnect event
 		s.Broadcast(fmt.Sprintf("%v has left the game", player.Name))
@@ -337,3 +313,6 @@ func (s *Server) Tick() (delay time.Duration, action gnet.Action) {
 	// tick every 50 ms (20 tps)
 	return time.Duration(50000000 - time.Since(startTime).Nanoseconds()), gnet.None
 }
+
+
+*/

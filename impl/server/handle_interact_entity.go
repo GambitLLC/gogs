@@ -2,16 +2,16 @@ package server
 
 import (
 	"fmt"
-	"github.com/panjf2000/gnet"
 	"gogs/api/data/chat"
 	"gogs/impl/ecs"
 	"gogs/impl/logger"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handleInteractEntity(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handleInteractEntity(conn net.Conn, pkt pk.Packet) (out []byte, err error) {
 	in := serverbound.InteractEntity{}
 	if err = in.FromPacket(pkt); err != nil {
 		return
@@ -45,9 +45,9 @@ func (s *Server) handleAttack(attacker *ecs.Player, defender *ecs.Player) {
 		Health:         pk.Float(remainingHealth),
 		Food:           20.0,
 		FoodSaturation: 0,
-	}.CreatePacket().Encode()
+	}.CreatePacket()
 
-	_ = defender.Connection.AsyncWrite(outPacket)
+	_ = defender.Connection.WritePacket(outPacket)
 
 	if remainingHealth == 0 {
 		out := clientbound.EntityStatus{
@@ -56,16 +56,16 @@ func (s *Server) handleAttack(attacker *ecs.Player, defender *ecs.Player) {
 		}.CreatePacket()
 		s.broadcastPacket(out, nil)
 
-		_ = defender.Connection.AsyncWrite(clientbound.CombatEvent{
+		_ = defender.Connection.WritePacket(clientbound.CombatEvent{
 			PlayerID: pk.VarInt(defender.ID()),
 			EntityID: pk.Int(attacker.ID()),
 			Message:  pk.Chat(chat.NewMessage("You have died").AsJSON()),
-		}.CreatePacket().Encode())
+		}.CreatePacket())
 		return
 	}
 
 	// TODO: figure out what sounds are played and for who
-	_ = attacker.Connection.AsyncWrite(clientbound.NamedSoundEffect{
+	_ = attacker.Connection.WritePacket(clientbound.NamedSoundEffect{
 		SoundName:       "entity.player.attack.strong",
 		SoundCategory:   7, // Player category?
 		EffectPositionX: pk.Int(defender.X * 8),
@@ -73,7 +73,7 @@ func (s *Server) handleAttack(attacker *ecs.Player, defender *ecs.Player) {
 		EffectPositionZ: pk.Int(defender.Z * 8),
 		Volume:          1.0,
 		Pitch:           1.0,
-	}.CreatePacket().Encode())
+	}.CreatePacket())
 
 	// TODO: this should only broadcast to players in visual range
 	out := clientbound.EntityStatus{

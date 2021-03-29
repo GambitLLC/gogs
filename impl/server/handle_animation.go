@@ -2,12 +2,12 @@ package server
 
 import (
 	"fmt"
-	"github.com/panjf2000/gnet"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 )
 
-func (s *Server) handleAnimation(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handleAnimation(conn net.Conn, pkt pk.Packet) (out []byte, err error) {
 	var hand pk.VarInt
 	if err = pkt.Unmarshal(&hand); err != nil {
 		return

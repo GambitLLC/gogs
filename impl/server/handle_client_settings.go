@@ -1,16 +1,15 @@
 package server
 
 import (
-	"bytes"
-	"github.com/panjf2000/gnet"
 	"gogs/impl/ecs"
 	"gogs/impl/logger"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handleClientSettings(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handleClientSettings(conn net.Conn, pkt pk.Packet) (err error) {
 	logger.Printf("Received client settings")
 	in := serverbound.ClientSettings{}
 	if err = in.FromPacket(pkt); err != nil {
@@ -27,28 +26,32 @@ func (s *Server) handleClientSettings(conn gnet.Conn, pkt pk.Packet) (out []byte
 
 	if !player.Online {
 		player.Online = true
-		out = s.initialGameData(player)
+		err = s.sendInitialData(player)
 	}
 
 	return
 }
 
-// initial game data returns all the packets that a client typically needs when joining the game encoded
-func (s *Server) initialGameData(player *ecs.Player) []byte {
-	buf := bytes.Buffer{}
-
-	buf.Write(clientbound.HeldItemChange{
+// sendInitialData returns all the packets that a client typically needs when joining the game encoded
+func (s *Server) sendInitialData(player *ecs.Player) (err error) {
+	if err = player.Connection.WritePacket(clientbound.HeldItemChange{
 		Slot: pk.Byte(player.HeldItem),
-	}.CreatePacket().Encode())
+	}.CreatePacket()); err != nil {
+		return
+	}
 
-	buf.Write(clientbound.DeclareRecipes{
+	if err = player.Connection.WritePacket(clientbound.DeclareRecipes{
 		NumRecipes: 0,
 		Recipes:    nil,
-	}.CreatePacket().Encode())
+	}.CreatePacket()); err != nil {
+		return
+	}
 
-	buf.Write(clientbound.VanillaTags().CreatePacket().Encode())
+	if err = player.Connection.WritePacket(clientbound.VanillaTags().CreatePacket()); err != nil {
+		return
+	}
 
-	buf.Write(clientbound.PlayerPositionAndLook{
+	if err = player.Connection.WritePacket(clientbound.PlayerPositionAndLook{
 		X:          pk.Double(player.X),
 		Y:          pk.Double(player.Y),
 		Z:          pk.Double(player.Z),
@@ -56,10 +59,25 @@ func (s *Server) initialGameData(player *ecs.Player) []byte {
 		Pitch:      pk.Float(player.Pitch),
 		Flags:      0,
 		TeleportID: 0,
-	}.CreatePacket().Encode())
+	}.CreatePacket()); err != nil {
+		return
+	}
+
+	if err = player.Connection.WritePacket(clientbound.PlayerPositionAndLook{
+		X:          pk.Double(player.X),
+		Y:          pk.Double(player.Y),
+		Z:          pk.Double(player.Z),
+		Yaw:        pk.Float(player.Yaw),
+		Pitch:      pk.Float(player.Pitch),
+		Flags:      0,
+		TeleportID: 0,
+	}.CreatePacket()); err != nil {
+		return
+	}
 
 	// send player info (tab list)
-	s.playerMapMutex.RLock()
+	s.playerMap.Lock.RLock()
+	defer s.playerMap.Lock.RUnlock()
 	numPlayers := len(s.playerMap.uuidToPlayer)
 	playerInfoArr := make([]pk.Encodable, 0, numPlayers)
 	for _, p := range s.playerMap.uuidToPlayer {
@@ -74,16 +92,21 @@ func (s *Server) initialGameData(player *ecs.Player) []byte {
 			DisplayName:    "",
 		})
 	}
-	buf.Write(clientbound.PlayerInfo{
+
+	if err = player.Connection.WritePacket(clientbound.PlayerInfo{
 		Action:     0,
 		NumPlayers: pk.VarInt(numPlayers),
 		Players:    playerInfoArr,
-	}.CreatePacket().Encode())
+	}.CreatePacket()); err != nil {
+		return
+	}
 
-	buf.Write(clientbound.UpdateViewPosition{
+	if err = player.Connection.WritePacket(clientbound.UpdateViewPosition{
 		ChunkX: pk.VarInt(int32(player.X) >> 4),
 		ChunkZ: pk.VarInt(int32(player.Z) >> 4),
-	}.CreatePacket().Encode())
+	}.CreatePacket()); err != nil {
+		return
+	}
 
 	// send initial chunks
 	chunkX := int(player.X) >> 4
@@ -92,17 +115,21 @@ func (s *Server) initialGameData(player *ecs.Player) []byte {
 	viewDistance := int(player.ViewDistance)
 	for x := -viewDistance; x <= viewDistance; x++ {
 		for z := -viewDistance; z <= viewDistance; z++ {
-			buf.Write(s.chunkDataPacket(chunkX+x, chunkZ+z))
+			if err = player.Connection.WritePacket(s.chunkDataPacket(chunkX+x, chunkZ+z)); err != nil {
+				return
+			}
 		}
 	}
 
-	buf.Write(clientbound.SpawnPosition{Location: pk.Position{
+	if err = player.Connection.WritePacket(clientbound.SpawnPosition{Location: pk.Position{
 		X: int32(player.SpawnPosition.X),
 		Y: int32(player.SpawnPosition.Y),
 		Z: int32(player.SpawnPosition.Z),
-	}}.CreatePacket().Encode())
+	}}.CreatePacket()); err != nil {
+		return
+	}
 
-	buf.Write(clientbound.PlayerPositionAndLook{
+	if err = player.Connection.WritePacket(clientbound.PlayerPositionAndLook{
 		X:          pk.Double(player.X),
 		Y:          pk.Double(player.Y),
 		Z:          pk.Double(player.Z),
@@ -110,25 +137,34 @@ func (s *Server) initialGameData(player *ecs.Player) []byte {
 		Pitch:      pk.Float(player.Pitch),
 		Flags:      0,
 		TeleportID: 0,
-	}.CreatePacket().Encode())
+	}.CreatePacket()); err != nil {
+		return
+	}
 
 	// send inventory
 	player.InventoryLock.RLock()
-	buf.Write(clientbound.WindowItems{
+	if err = player.Connection.WritePacket(clientbound.WindowItems{
 		WindowID: 0,
 		Count:    pk.Short(len(player.Inventory)),
 		SlotData: player.Inventory,
-	}.CreatePacket().Encode())
+	}.CreatePacket()); err != nil {
+		return
+	}
 	player.InventoryLock.RUnlock()
 
 	// send time update with negative time to keep sun in position
-	buf.Write(clientbound.TimeUpdate{WorldAge: 0, TimeOfDay: -6000}.CreatePacket().Encode())
+	if err = player.Connection.WritePacket(clientbound.TimeUpdate{
+		WorldAge:  0,
+		TimeOfDay: -6000,
+	}.CreatePacket()); err != nil {
+		return
+	}
 
 	// also add spawn player packets for players already online
 	// TODO: this logic should be done elsewhere (when players enter range) (tick?)
 	for _, p := range s.playerMap.uuidToPlayer {
 		if p.UUID != player.UUID {
-			buf.Write(clientbound.SpawnPlayer{
+			if err = player.Connection.WritePacket(clientbound.SpawnPlayer{
 				EntityID:   pk.VarInt(p.ID()),
 				PlayerUUID: pk.UUID(p.UUID),
 				X:          pk.Double(p.X),
@@ -136,15 +172,16 @@ func (s *Server) initialGameData(player *ecs.Player) []byte {
 				Z:          pk.Double(p.Z),
 				Yaw:        pk.Angle(p.Yaw),
 				Pitch:      pk.Angle(p.Pitch),
-			}.CreatePacket().Encode())
+			}.CreatePacket()); err != nil {
+				return
+			}
 		}
 	}
-	s.playerMapMutex.RUnlock()
 
-	return buf.Bytes()
+	return nil
 }
 
-func (s *Server) chunkDataPacket(x int, z int) []byte {
+func (s *Server) chunkDataPacket(x int, z int) pk.Packet {
 	column := s.world.Column(x, z)
 
 	column.Lock.RLock()
@@ -186,7 +223,7 @@ func (s *Server) chunkDataPacket(x int, z int) []byte {
 		blockEntities[i] = pk.NBT{V: v}
 	}
 
-	chunk := clientbound.ChunkData{
+	return clientbound.ChunkData{
 		ChunkX:         pk.Int(x),
 		ChunkZ:         pk.Int(z),
 		FullChunk:      true,
@@ -203,7 +240,5 @@ func (s *Server) chunkDataPacket(x int, z int) []byte {
 		Data:             chunkDataArray,
 		NumBlockEntities: pk.VarInt(len(blockEntities)),
 		BlockEntities:    blockEntities,
-	}.CreatePacket().Encode()
-
-	return chunk
+	}.CreatePacket()
 }

@@ -1,14 +1,14 @@
 package server
 
 import (
-	"github.com/panjf2000/gnet"
 	"gogs/impl/logger"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handlePlayerPositionAndRotation(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handlePlayerPositionAndRotation(conn net.Conn, pkt pk.Packet) (err error) {
 	player := s.playerFromConn(conn)
 	logger.Printf("Received player pos and rotation from %v", player.Name)
 	in := serverbound.PlayerPositionAndRotation{}
@@ -36,7 +36,7 @@ func (s *Server) handlePlayerPositionAndRotation(conn gnet.Conn, pkt pk.Packet) 
 
 	// if chunk border was crossed, update view pos and send new chunks
 	if int(player.X)>>4 != int(in.X)>>4 || int(player.Z)>>4 != int(in.Z)>>4 {
-		out = s.updateViewPosition(player)
+		err = s.updateViewPosition(player)
 	}
 
 	player.X = float64(in.X)

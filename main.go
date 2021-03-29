@@ -2,14 +2,12 @@ package main
 
 import (
 	"flag"
-	"github.com/panjf2000/gnet"
 	"gogs/impl/logger"
 	"gogs/impl/server"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"runtime"
-	"strconv"
 )
 
 func main() {
@@ -31,9 +29,13 @@ func main() {
 	MinecraftServer.Host = *host
 	MinecraftServer.Port = uint16(*port)
 
-	connString := "tcp://" + MinecraftServer.Host + ":" + strconv.Itoa(int(MinecraftServer.Port))
+	logger.Error(MinecraftServer.Start())
 
-	logger.Error(
-		gnet.Serve(MinecraftServer, connString, gnet.WithMulticore(false), gnet.WithTicker(true)),
-	)
+	/*
+		connString := "tcp://" + MinecraftServer.Host + ":" + strconv.Itoa(int(MinecraftServer.Port))
+
+		logger.Error(
+			gnet.Serve(MinecraftServer, connString, gnet.WithMulticore(false), gnet.WithTicker(true)),
+		)
+	*/
 }

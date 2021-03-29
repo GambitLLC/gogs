@@ -1,14 +1,14 @@
 package server
 
 import (
-	"github.com/panjf2000/gnet"
 	"gogs/impl/logger"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handlePlayerRotation(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handlePlayerRotation(conn net.Conn, pkt pk.Packet) (out []byte, err error) {
 	player := s.playerFromConn(conn)
 	logger.Printf("Received player rotation for %s", player.Name)
 

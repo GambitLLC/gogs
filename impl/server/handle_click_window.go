@@ -2,15 +2,15 @@ package server
 
 import (
 	"bytes"
-	"github.com/panjf2000/gnet"
 	"gogs/impl/logger"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/packetids"
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handleClickWindow(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handleClickWindow(conn net.Conn, pkt pk.Packet) (out []byte, err error) {
 	in := serverbound.ClickWindow{}
 	if err = in.FromPacket(pkt); err != nil {
 		return

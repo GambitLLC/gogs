@@ -3,12 +3,12 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"github.com/panjf2000/gnet"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 )
 
-func (s *Server) handleClientStatus(conn gnet.Conn, pkt pk.Packet) ([]byte, error) {
+func (s *Server) handleClientStatus(conn net.Conn, pkt pk.Packet) ([]byte, error) {
 	var actionID pk.VarInt
 	if err := pkt.Unmarshal(&actionID); err != nil {
 		return nil, err

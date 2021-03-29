@@ -2,15 +2,15 @@ package server
 
 import (
 	"fmt"
-	"github.com/panjf2000/gnet"
 	"gogs/api/data/chat"
 	"gogs/impl/logger"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handleChatMessage(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handleChatMessage(conn net.Conn, pkt pk.Packet) (out []byte, err error) {
 	m := serverbound.ChatMessage{}
 	if err = m.FromPacket(pkt); err != nil {
 		return
@@ -24,17 +24,18 @@ func (s *Server) handleChatMessage(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 	}
 
 	msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name, m.Message))
-	out = clientbound.ChatMessage{
+	tmp := clientbound.ChatMessage{
 		JSONData: pk.Chat(msg.AsJSON()),
 		Position: 0,
 		Sender:   pk.UUID(player.UUID),
-	}.CreatePacket().Encode()
+	}.CreatePacket()
 
-	s.playerMapMutex.RLock()
+	s.playerMap.Lock.RLock()
+	defer s.playerMap.Lock.RUnlock()
 	for _, p := range s.playerMap.uuidToPlayer {
-		_ = p.Connection.AsyncWrite(out)
+		_ = p.Connection.WritePacket(tmp)
 	}
-	s.playerMapMutex.RUnlock()
+
 	/*
 		players := make([]api.Player, len(s.playerMap.uuidToPlayer))
 		for _, p := range s.playerMap.uuidToPlayer {
@@ -61,5 +62,5 @@ func (s *Server) handleChatMessage(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 			_ = c.AsyncWrite(out)
 		}
 	*/
-	return nil, nil
+	return
 }

@@ -1,16 +1,15 @@
 package server
 
 import (
-	"bytes"
-	"github.com/panjf2000/gnet"
 	"gogs/impl/ecs"
 	"gogs/impl/logger"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handlePlayerPosition(conn net.Conn, pkt pk.Packet) (err error) {
 	player := s.playerFromConn(conn)
 	logger.Printf("Received player position for %v", player.Name)
 	in := serverbound.PlayerPosition{}
@@ -31,7 +30,7 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 	// TODO: according to wikivg, update view position is sent on change in Y coord as well
 	// if chunk border was crossed, update view pos and send new chunks
 	if int(player.X)>>4 != int(in.X)>>4 || int(player.Z)>>4 != int(in.Z)>>4 {
-		out = s.updateViewPosition(player)
+		err = s.updateViewPosition(player)
 	}
 
 	// update player position
@@ -42,12 +41,13 @@ func (s *Server) handlePlayerPosition(conn gnet.Conn, pkt pk.Packet) (out []byte
 	return
 }
 
-func (s *Server) updateViewPosition(player *ecs.Player) []byte {
-	buf := bytes.Buffer{}
-	buf.Write(clientbound.UpdateViewPosition{
+func (s *Server) updateViewPosition(player *ecs.Player) (err error) {
+	if err = player.Connection.WritePacket(clientbound.UpdateViewPosition{
 		ChunkX: pk.VarInt(int(player.X) >> 4),
 		ChunkZ: pk.VarInt(int(player.Z) >> 4),
-	}.CreatePacket().Encode())
+	}.CreatePacket()); err != nil {
+		return
+	}
 
 	chunkX := int(player.X) >> 4
 	chunkZ := int(player.Z) >> 4
@@ -55,12 +55,14 @@ func (s *Server) updateViewPosition(player *ecs.Player) []byte {
 	viewDistance := int(player.ViewDistance)
 	for x := -viewDistance; x <= viewDistance; x++ {
 		for z := -viewDistance; z <= viewDistance; z++ {
-			buf.Write(s.chunkDataPacket(chunkX+x, chunkZ+z))
+			if err = player.Connection.WritePacket(s.chunkDataPacket(chunkX+x, chunkZ+z)); err != nil {
+				return
+			}
 		}
 	}
 
 	// TODO: only send new chunks and unload old chunks
 	// maybe the issue is with gnet? try sending chunks individually rather than all together somehow (asyncwrite hangs)
 
-	return buf.Bytes()
+	return nil
 }

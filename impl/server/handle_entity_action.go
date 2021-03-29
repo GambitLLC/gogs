@@ -2,13 +2,13 @@ package server
 
 import (
 	"fmt"
-	"github.com/panjf2000/gnet"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handleEntityAction(conn gnet.Conn, pkt pk.Packet) ([]byte, error) {
+func (s *Server) handleEntityAction(conn net.Conn, pkt pk.Packet) ([]byte, error) {
 	in := serverbound.EntityAction{}
 	if err := in.FromPacket(pkt); err != nil {
 		return nil, err

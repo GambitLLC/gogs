@@ -1,20 +1,17 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
-	"github.com/panjf2000/gnet"
 	"gogs/api/events"
 	"gogs/impl/ecs"
 	"gogs/impl/logger"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/packetids"
 )
 
-func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
-	ctx := conn.Context().(connectionContext)
-
+func (s *Server) handleLoginStart(conn net.Conn, pkt pk.Packet) (err error) {
 	var name pk.String
 	if err = pkt.Unmarshal(&name); err != nil {
 		return
@@ -32,19 +29,24 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 	events.PlayerLoginEvent.Trigger(&event)
 
 	if event.Result == events.LoginAllowed {
-		buf := bytes.Buffer{}
 		u := pk.NameToUUID(string(name)) // todo: get uuid from mojang servers
 		// send login success
-		buf.Write(pk.Marshal(
+
+		err = conn.WritePacket(pk.Marshal(
 			packetids.LoginSuccess,
 			pk.UUID(u),
 			name,
-		).Encode())
+		))
+		if err != nil {
+			return err
+		}
 
 		player := s.createPlayer(string(name), u, conn)
-		buf.Write(s.joinGamePacket(player).Encode())
 
-		out = buf.Bytes()
+		err = conn.WritePacket(s.joinGamePacket(player))
+		if err != nil {
+			return err
+		}
 
 		/*
 			event := events.PlayerJoinData{
@@ -55,36 +57,38 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 		*/
 		s.Broadcast(fmt.Sprintf("%v has joined the game", player.Name))
 
-		// send out new player info to everyone already online
-		playerInfoPacket := clientbound.PlayerInfo{
-			Action:     0,
-			NumPlayers: 1,
-			Players: []pk.Encodable{
-				clientbound.PlayerInfoAddPlayer{
-					UUID:           pk.UUID(player.UUID),
-					Name:           pk.String(player.Name),
-					NumProperties:  0,
-					Properties:     nil,
-					Gamemode:       pk.VarInt(player.GameMode),
-					Ping:           1,
-					HasDisplayName: false,
-					DisplayName:    "",
+		/*
+			// send out new player info to everyone already online
+			playerInfoPacket := clientbound.PlayerInfo{
+				Action:     0,
+				NumPlayers: 1,
+				Players: []pk.Encodable{
+					clientbound.PlayerInfoAddPlayer{
+						UUID:           pk.UUID(player.UUID),
+						Name:           pk.String(player.Name),
+						NumProperties:  0,
+						Properties:     nil,
+						Gamemode:       pk.VarInt(player.GameMode),
+						Ping:           1,
+						HasDisplayName: false,
+						DisplayName:    "",
+					},
 				},
-			},
-		}.CreatePacket()
-		// TODO: spawn player should be occurring when players enter range (not join game), do logic elsewhere (tick?)
-		spawnPlayerPacket := clientbound.SpawnPlayer{
-			EntityID:   pk.VarInt(player.ID()),
-			PlayerUUID: pk.UUID(player.UUID),
-			X:          pk.Double(player.X),
-			Y:          pk.Double(player.Y),
-			Z:          pk.Double(player.Z),
-			Yaw:        pk.Angle(player.Yaw),
-			Pitch:      pk.Angle(player.Pitch),
-		}.CreatePacket()
+			}.CreatePacket()
+			// TODO: spawn player should be occurring when players enter range (not join game), do logic elsewhere (tick?)
+			spawnPlayerPacket := clientbound.SpawnPlayer{
+				EntityID:   pk.VarInt(player.ID()),
+				PlayerUUID: pk.UUID(player.UUID),
+				X:          pk.Double(player.X),
+				Y:          pk.Double(player.Y),
+				Z:          pk.Double(player.Z),
+				Yaw:        pk.Angle(player.Yaw),
+				Pitch:      pk.Angle(player.Pitch),
+			}.CreatePacket()
 
-		s.broadcastPacket(playerInfoPacket, conn)
-		s.broadcastPacket(spawnPlayerPacket, conn)
+			s.broadcastPacket(playerInfoPacket, conn)
+			s.broadcastPacket(spawnPlayerPacket, conn)
+		*/
 	} else {
 		// TODO: Send disconnect packet with reason
 		err = fmt.Errorf("login not allowed not yet implemented")
@@ -92,10 +96,6 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 		return
 	}
 
-	conn.SetContext(connectionContext{
-		State:           playState,
-		ProtocolVersion: ctx.ProtocolVersion,
-	})
 	return
 }
 

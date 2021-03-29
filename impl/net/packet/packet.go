@@ -42,21 +42,21 @@ func (p Packet) Encode() (bi []byte) {
 	return
 }
 
-// Decode will create a Packet from the given byte array
-func Decode(r Reader) (*Packet, error) {
+// Decode will create a Packet from the given reader
+func Decode(r Reader) (Packet, error) {
 	var length VarInt
 	if err := length.Decode(r); err != nil {
-		return nil, err
+		return Packet{}, err
 	}
 
 	if length < 1 {
-		return nil, errors.New("packet is too short")
+		return Packet{}, errors.New("packet is too short")
 	}
 
 	// read the entire packet first
 	bi := make([]byte, length)
 	if _, err := r.Read(bi); err != nil {
-		return nil, err
+		return Packet{}, err
 	}
 
 	// TODO: decompress
@@ -64,8 +64,8 @@ func Decode(r Reader) (*Packet, error) {
 	br := bytes.NewBuffer(bi)
 	var id VarInt
 	if err := id.Decode(br); err != nil {
-		return nil, errors.New("failed to read packet ID")
+		return Packet{}, errors.New("failed to read packet ID")
 	}
 
-	return &Packet{ID: int32(id), Data: br.Bytes()}, nil
+	return Packet{ID: int32(id), Data: br.Bytes()}, nil
 }
