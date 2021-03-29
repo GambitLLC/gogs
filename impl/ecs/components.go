@@ -1,7 +1,7 @@
 package ecs
 
 import (
-	"github.com/panjf2000/gnet"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"sync"
 )
@@ -38,7 +38,7 @@ type InventoryComponent struct {
 }
 
 type ConnectionComponent struct {
-	Connection gnet.Conn
+	Connection net.Conn
 	Online     bool
 }
 

@@ -7,7 +7,7 @@ import (
 	"gogs/impl/net/packet/clientbound"
 )
 
-func (s *Server) handleStatusRequest() ([]byte, error) {
+func (s *Server) statusPacket() (pk.Packet, error) {
 	logger.Printf("Received status request packet")
 	resp := response{
 		Version: version{
@@ -32,7 +32,7 @@ func (s *Server) handleStatusRequest() ([]byte, error) {
 
 	packet := clientbound.StatusResponse{
 		JSONResponse: pk.String(jsonBytes),
-	}.CreatePacket().Encode()
+	}.CreatePacket()
 
 	return packet, nil
 }

@@ -1,17 +1,16 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
-	"github.com/panjf2000/gnet"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 )
 
-func (s *Server) handleClientStatus(conn gnet.Conn, pkt pk.Packet) ([]byte, error) {
+func (s *Server) handleClientStatus(conn net.Conn, pkt pk.Packet) (err error) {
 	var actionID pk.VarInt
-	if err := pkt.Unmarshal(&actionID); err != nil {
-		return nil, err
+	if err = pkt.Unmarshal(&actionID); err != nil {
+		return
 	}
 
 	switch actionID {
@@ -19,10 +18,8 @@ func (s *Server) handleClientStatus(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 		player := s.playerFromConn(conn)
 		player.Health = 20
 
-		buf := bytes.Buffer{}
-
 		// send respawn packet
-		buf.Write(clientbound.Respawn{
+		if err = conn.WritePacket(clientbound.Respawn{
 			Dimension:        pk.NBT{V: clientbound.MinecraftOverworld},
 			WorldName:        "world",
 			HashedSeed:       0,
@@ -31,22 +28,24 @@ func (s *Server) handleClientStatus(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 			IsDebug:          false,
 			IsFlat:           true,
 			CopyMetadata:     false,
-		}.CreatePacket().Encode())
+		}.CreatePacket()); err != nil {
+			return
+		}
 
 		// send inventory
 		player.InventoryLock.RLock()
-		buf.Write(clientbound.WindowItems{
+		defer player.InventoryLock.RUnlock()
+		if err = conn.WritePacket(clientbound.WindowItems{
 			WindowID: 0,
 			Count:    pk.Short(len(player.Inventory)),
 			SlotData: player.Inventory,
-		}.CreatePacket().Encode())
-		player.InventoryLock.RUnlock()
-
-		return buf.Bytes(), nil
+		}.CreatePacket()); err != nil {
+			return
+		}
 	case 1: // Request stats
 	default:
-		return nil, fmt.Errorf("client status got invalid action id %d", actionID)
+		return fmt.Errorf("client status got invalid action id %d", actionID)
 	}
 
-	return nil, nil
+	return nil
 }

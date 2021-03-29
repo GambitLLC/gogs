@@ -2,16 +2,16 @@ package server
 
 import (
 	"fmt"
-	"github.com/panjf2000/gnet"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handleEntityAction(conn gnet.Conn, pkt pk.Packet) ([]byte, error) {
+func (s *Server) handleEntityAction(conn net.Conn, pkt pk.Packet) error {
 	in := serverbound.EntityAction{}
 	if err := in.FromPacket(pkt); err != nil {
-		return nil, err
+		return err
 	}
 
 	player := s.playerFromConn(conn)
@@ -40,9 +40,8 @@ func (s *Server) handleEntityAction(conn gnet.Conn, pkt pk.Packet) ([]byte, erro
 	case 7: // open horse inventory
 	case 8: // start flying with elytra
 	default:
-		_ = conn.Close()
-		return nil, fmt.Errorf("entity action got invalid action id %d", in.ActionID)
+		return fmt.Errorf("entity action got invalid action id %d", in.ActionID)
 	}
 
-	return nil, nil
+	return nil
 }

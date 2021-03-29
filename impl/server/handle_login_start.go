@@ -1,20 +1,17 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
-	"github.com/panjf2000/gnet"
 	"gogs/api/events"
 	"gogs/impl/ecs"
 	"gogs/impl/logger"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/packetids"
 )
 
-func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
-	ctx := conn.Context().(connectionContext)
-
+func (s *Server) handleLoginStart(conn net.Conn, pkt pk.Packet) (err error) {
 	var name pk.String
 	if err = pkt.Unmarshal(&name); err != nil {
 		return
@@ -32,19 +29,24 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 	events.PlayerLoginEvent.Trigger(&event)
 
 	if event.Result == events.LoginAllowed {
-		buf := bytes.Buffer{}
 		u := pk.NameToUUID(string(name)) // todo: get uuid from mojang servers
 		// send login success
-		buf.Write(pk.Marshal(
+
+		err = conn.WritePacket(pk.Marshal(
 			packetids.LoginSuccess,
 			pk.UUID(u),
 			name,
-		).Encode())
+		))
+		if err != nil {
+			return err
+		}
 
 		player := s.createPlayer(string(name), u, conn)
-		buf.Write(s.joinGamePacket(player).Encode())
 
-		out = buf.Bytes()
+		err = conn.WritePacket(s.joinGamePacket(player))
+		if err != nil {
+			return err
+		}
 
 		/*
 			event := events.PlayerJoinData{
@@ -92,10 +94,6 @@ func (s *Server) handleLoginStart(conn gnet.Conn, pkt pk.Packet) (out []byte, er
 		return
 	}
 
-	conn.SetContext(connectionContext{
-		State:           playState,
-		ProtocolVersion: ctx.ProtocolVersion,
-	})
 	return
 }
 

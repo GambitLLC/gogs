@@ -1,15 +1,15 @@
 package server
 
 import (
-	"github.com/panjf2000/gnet"
 	"gogs/impl/data"
 	"gogs/impl/ecs"
+	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
 )
 
-func (s *Server) handlePlayerDigging(conn gnet.Conn, pkt pk.Packet) (out []byte, err error) {
+func (s *Server) handlePlayerDigging(conn net.Conn, pkt pk.Packet) (err error) {
 	in := serverbound.PlayerDigging{}
 	if err = in.FromPacket(pkt); err != nil {
 		return
