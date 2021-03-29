@@ -37,9 +37,10 @@ type Server struct {
 	gnet.EventServer
 	serverSettings
 
-	Host      string
-	Port      uint16
-	tickCount uint64
+	Host         string
+	Port         uint16
+	tickCount    uint64
+	shuttingDown bool
 
 	playerMapMutex sync.RWMutex
 	playerMap      *playerMapping
@@ -318,8 +319,9 @@ func (s *Server) React(frame []byte, c gnet.Conn) ([]byte, gnet.Action) {
 
 //On tick
 func (s *Server) Tick() (delay time.Duration, action gnet.Action) {
-	s.playerMapMutex.RLock()
-	defer s.playerMapMutex.RUnlock()
+	if s.shuttingDown {
+		return 0, gnet.Shutdown
+	}
 
 	startTime := time.Now()
 	// TODO: probably game logic stuff
@@ -330,10 +332,6 @@ func (s *Server) Tick() (delay time.Duration, action gnet.Action) {
 		}.CreatePacket()
 		s.broadcastPacket(pkt, nil)
 	}
-
-	//for _, p := range s.playerMap.uuidToPlayer {
-	//	p.Tick(s)
-	//}
 
 	s.tickCount++
 	// tick every 50 ms (20 tps)

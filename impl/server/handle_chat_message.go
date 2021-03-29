@@ -18,12 +18,18 @@ func (s *Server) handleChatMessage(conn gnet.Conn, pkt pk.Packet) (out []byte, e
 	player := s.playerFromConn(conn)
 	logger.Printf("Received chat message `%v` from %v", m.Message, player.Name)
 
+	// TODO: MOVE THIS INTO COMMAND HANDLER
+	if m.Message == "/stop" {
+		s.shuttingDown = true
+	}
+
 	msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name, m.Message))
 	out = clientbound.ChatMessage{
 		JSONData: pk.Chat(msg.AsJSON()),
 		Position: 0,
 		Sender:   pk.UUID(player.UUID),
 	}.CreatePacket().Encode()
+
 	s.playerMapMutex.RLock()
 	for _, p := range s.playerMap.uuidToPlayer {
 		_ = p.Connection.AsyncWrite(out)
