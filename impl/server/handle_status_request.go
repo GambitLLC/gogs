@@ -9,7 +9,6 @@ import (
 
 func (s *Server) handleStatusRequest() ([]byte, error) {
 	logger.Printf("Received status request packet")
-	// TODO: fill response with info from server
 	resp := response{
 		Version: version{
 			Name:     "gogs 1.16.5",
@@ -20,7 +19,7 @@ func (s *Server) handleStatusRequest() ([]byte, error) {
 		},
 		Players: players{
 			Max:    int(s.MaxPlayers),
-			Online: len(s.playerMap.uuidToPlayer),
+			Online: len(s.playerMap.connToPlayer),
 			Sample: nil,
 		},
 		Favicon: "",
