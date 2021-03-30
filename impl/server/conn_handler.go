@@ -13,10 +13,8 @@ import (
 type connectionState uint8
 
 const (
-	handshakeState connectionState = 0
-	statusState                    = 1
-	loginState                     = 2
-	playState                      = 3
+	statusState connectionState = 1
+	loginState                  = 2
 )
 
 func (s *Server) handleHandshake(conn net.Conn) {
