@@ -27,8 +27,8 @@ func (s *Server) handleHandshake(conn net.Conn) {
 		return
 	}
 
-	if pkt.ID != 0 {
-		logger.Printf("handshake expects Packet ID 0")
+	if pkt.ID != packetids.Handshake {
+		logger.Printf("handshake received wrong packet id, %d", pkt.ID)
 		_ = conn.Close()
 		return
 	}
@@ -121,33 +121,43 @@ func (s *Server) handleClosedState(conn net.Conn) {
 	}
 }
 
-func (s *Server) handleStatus(conn net.Conn) error {
-	pkt, err := conn.ReadPacket()
+func (s *Server) handleStatus(conn net.Conn) (err error) {
+	var pkt pk.Packet
+	pkt, err = conn.ReadPacket()
 	if err != nil {
 		return err
 	}
 
-	switch pkt.ID {
-	case packetids.StatusRequest:
-		resp, err := s.statusPacket()
-		if err != nil {
-			return err
-		}
-		return conn.WritePacket(resp)
-	case packetids.StatusPing:
-		logger.Printf("Received status ping packet")
-		ping := serverbound.QueryStatusPing{}
-		if err = ping.FromPacket(pkt); err != nil {
-			return err
-		}
-
-		return conn.WritePacket(clientbound.StatusPong{
-			Payload: ping.Payload,
-		}.CreatePacket())
-
-	default:
-		return fmt.Errorf("status state received illegal packet id: 0x%02X", pkt.ID)
+	if pkt.ID != packetids.StatusRequest {
+		return fmt.Errorf("status state expected StatusRequest, got %d", pkt.ID)
 	}
+
+	// send status response
+	if pkt, err = s.statusPacket(); err != nil {
+		return
+	}
+	if err = conn.WritePacket(pkt); err != nil {
+		return
+	}
+
+	pkt, err = conn.ReadPacket()
+	if err != nil {
+		return err
+	}
+
+	if pkt.ID != packetids.StatusPing {
+		return fmt.Errorf("status state expected StatusPing, got %d", pkt.ID)
+	}
+
+	ping := serverbound.QueryStatusPing{}
+	if err = ping.FromPacket(pkt); err != nil {
+		return err
+	}
+
+	// send pong
+	return conn.WritePacket(clientbound.StatusPong{
+		Payload: ping.Payload,
+	}.CreatePacket())
 }
 
 func (s *Server) handleLogin(conn net.Conn) error {
