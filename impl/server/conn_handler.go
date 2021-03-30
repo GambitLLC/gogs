@@ -8,6 +8,7 @@ import (
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/packetids"
 	"gogs/impl/net/packet/serverbound"
+	"io"
 )
 
 type connectionState uint8
@@ -65,7 +66,8 @@ close:
 	case <-s.shutdown:
 		return
 	default:
-		if err != nil {
+		// ignore EOF (connection closed by client)
+		if err != nil && err != io.EOF {
 			logger.Printf("%s error: %v", state.String(), err)
 		}
 
