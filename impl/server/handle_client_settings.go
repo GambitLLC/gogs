@@ -112,9 +112,11 @@ func (s *Server) sendInitialData(player *ecs.Player) (err error) {
 	chunkX := int(player.X) >> 4
 	chunkZ := int(player.Z) >> 4
 
+	player.KnownChunks = make(map[int]map[int]struct{})
 	viewDistance := int(player.ViewDistance)
 	for x := -viewDistance; x <= viewDistance; x++ {
 		for z := -viewDistance; z <= viewDistance; z++ {
+			player.KnownChunks.Add(x, z)
 			if err = player.Connection.WritePacket(s.chunkDataPacket(chunkX+x, chunkZ+z)); err != nil {
 				return
 			}
