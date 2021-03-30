@@ -52,16 +52,49 @@ func (s *Server) updateViewPosition(player *ecs.Player) (err error) {
 	chunkX := int(player.X) >> 4
 	chunkZ := int(player.Z) >> 4
 
+	prevChunks := make(ecs.ChunkSet)
+	for x, xMap := range player.KnownChunks {
+		for z := range xMap {
+			prevChunks.Add(x, z)
+		}
+	}
+
+	newChunks := make(ecs.ChunkSet)
+
 	viewDistance := int(player.ViewDistance)
-	for x := -viewDistance; x <= viewDistance; x++ {
-		for z := -viewDistance; z <= viewDistance; z++ {
-			if err = player.Connection.WritePacket(s.chunkDataPacket(chunkX+x, chunkZ+z)); err != nil {
+	for x := chunkX - viewDistance; x <= chunkX+viewDistance; x++ {
+		for z := chunkZ - viewDistance; z <= chunkZ+viewDistance; z++ {
+			if player.KnownChunks.Contains(x, z) {
+				prevChunks.Remove(x, z)
+			} else {
+				newChunks.Add(x, z)
+				player.KnownChunks.Add(x, z)
+			}
+		}
+	}
+
+	// send data for the new chunks
+	for x, xMap := range newChunks {
+		for z := range xMap {
+			if err = player.Connection.WritePacket(s.chunkDataPacket(x, z)); err != nil {
 				return
 			}
 		}
 	}
 
-	// TODO: only send new chunks and unload old chunks
+	// remove old chunks and send unload chunk packet
+	for x, xMap := range prevChunks {
+		for z := range xMap {
+			player.KnownChunks.Remove(x, z)
+			unload := clientbound.UnloadChunk{
+				ChunkX: pk.Int(x),
+				ChunkZ: pk.Int(z),
+			}
+			if err = player.Connection.WritePacket(unload.CreatePacket()); err != nil {
+				return
+			}
+		}
+	}
 
 	return nil
 }
