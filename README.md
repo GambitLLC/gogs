@@ -52,10 +52,7 @@ A minecraft server rewrite soley with the purpose for PvP
 
 ### Built With
 
-* [gnet](https://github.com/panjf2000/gnet)
-* [golangmc](https://github.com/GoLangMc)
 * [go-mc](https://github.com/Tnze/go-mc)
-
 
 
 <!-- GETTING STARTED -->

@@ -62,7 +62,6 @@ func (s *Server) updateViewPosition(player *ecs.Player) (err error) {
 	}
 
 	// TODO: only send new chunks and unload old chunks
-	// maybe the issue is with gnet? try sending chunks individually rather than all together somehow (asyncwrite hangs)
 
 	return nil
 }

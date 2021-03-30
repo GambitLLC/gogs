@@ -30,12 +30,4 @@ func main() {
 	MinecraftServer.Port = uint16(*port)
 
 	logger.Error(MinecraftServer.Start())
-
-	/*
-		connString := "tcp://" + MinecraftServer.Host + ":" + strconv.Itoa(int(MinecraftServer.Port))
-
-		logger.Error(
-			gnet.Serve(MinecraftServer, connString, gnet.WithMulticore(false), gnet.WithTicker(true)),
-		)
-	*/
 }
