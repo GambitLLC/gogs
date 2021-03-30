@@ -20,7 +20,7 @@ func (s *Server) handleChatMessage(conn net.Conn, pkt pk.Packet) (err error) {
 
 	// TODO: MOVE THIS INTO COMMAND HANDLER
 	if m.Message == "/stop" {
-		s.shuttingDown = true
+		s.stop()
 	}
 
 	msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name, m.Message))
@@ -32,7 +32,7 @@ func (s *Server) handleChatMessage(conn net.Conn, pkt pk.Packet) (err error) {
 
 	s.playerMap.Lock.RLock()
 	defer s.playerMap.Lock.RUnlock()
-	for _, p := range s.playerMap.uuidToPlayer {
+	for _, p := range s.playerMap.connToPlayer {
 		_ = p.Connection.WritePacket(tmp)
 	}
 

@@ -13,22 +13,75 @@ import (
 type connectionState uint8
 
 const (
-	statusState connectionState = 1
-	loginState                  = 2
+	handshakeState connectionState = 0
+	statusState                    = 1
+	loginState                     = 2
+	playState                      = 3
 )
 
-func (s *Server) handleHandshake(conn net.Conn) {
+func (c connectionState) String() string {
+	switch c {
+	case handshakeState:
+		return "handshake state"
+	case statusState:
+		return "status state"
+	case loginState:
+		return "login state"
+	case playState:
+		return "play state"
+	default:
+		return "invalid connection state"
+	}
+}
+
+func (s *Server) handleConnection(conn net.Conn) {
+	state := handshakeState
+	var err error
+
+	state, err = s.handleHandshake(conn)
+	if err != nil {
+		state = 0
+		goto close
+	}
+	switch state {
+	case statusState:
+		err = s.handleStatus(conn)
+		if err != nil {
+			goto close
+		}
+	case loginState:
+		err = s.handleLogin(conn)
+		if err != nil {
+			goto close
+		}
+
+		state = playState
+		err = s.handlePlay(conn)
+		goto close
+	}
+
+close:
+	select {
+	case <-s.shutdown:
+		return
+	default:
+		if err != nil {
+			logger.Printf("%s error: %v", state.String(), err)
+		}
+
+		_ = conn.Close()
+		s.removeConnection(conn)
+	}
+}
+
+func (s *Server) handleHandshake(conn net.Conn) (connectionState, error) {
 	pkt, err := conn.ReadPacket()
 	if err != nil {
-		logger.Printf("handshake error: %v", err)
-		_ = conn.Close()
-		return
+		return 0, err
 	}
 
 	if pkt.ID != packetids.Handshake {
-		logger.Printf("handshake received wrong packet id, %d", pkt.ID)
-		_ = conn.Close()
-		return
+		return 0, fmt.Errorf("expected handshake, got packetid 0x%x", pkt.ID)
 	}
 
 	var (
@@ -40,40 +93,20 @@ func (s *Server) handleHandshake(conn net.Conn) {
 
 	err = pkt.Unmarshal(&protocolVersion, &address, &port, &nextState)
 	if err != nil {
-		logger.Printf("Handshake error: %v", err)
-		_ = conn.Close()
-		return
+		return 0, err
+	}
+
+	if nextState != statusState && nextState != loginState {
+		return 0, fmt.Errorf("received invalid next state %d", nextState)
 	}
 
 	logger.Printf("Received handshake: protocol %d and next state %d", protocolVersion, nextState)
-	switch connectionState(nextState) {
-	case statusState:
-		err = s.handleStatus(conn)
-		if err != nil {
-			logger.Printf("status state error: %v", err)
-		}
-	case loginState:
-		err = s.handleLogin(conn)
-		if err != nil {
-			logger.Printf("login state received error: %v", err)
-			break
-		}
-		err = s.handlePlay(conn)
-		if err != nil {
-			logger.Printf("play state received error: %v", err)
-		}
-	default:
-		logger.Printf("handshake received invalid next state: %d", nextState)
-	}
 
-	// close connection after handlers are done ... note handlePlay is blocking so this goroutine won't end early
-	logger.Printf("closing??? err: %v", err)
-	_ = conn.Close()
-	// TODO: handle closed connection stuff
-	s.handleClosedState(conn)
+	return connectionState(nextState), nil
 }
 
-func (s *Server) handleClosedState(conn net.Conn) {
+// removeConnection clears details related to the player for this connection. Does not close the connection.
+func (s *Server) removeConnection(conn net.Conn) {
 	logger.Printf("Connection closed")
 
 	//clean up all the player state

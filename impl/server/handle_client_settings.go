@@ -78,9 +78,9 @@ func (s *Server) sendInitialData(player *ecs.Player) (err error) {
 	// send player info (tab list)
 	s.playerMap.Lock.RLock()
 	defer s.playerMap.Lock.RUnlock()
-	numPlayers := len(s.playerMap.uuidToPlayer)
+	numPlayers := len(s.playerMap.connToPlayer)
 	playerInfoArr := make([]pk.Encodable, 0, numPlayers)
-	for _, p := range s.playerMap.uuidToPlayer {
+	for _, p := range s.playerMap.connToPlayer {
 		playerInfoArr = append(playerInfoArr, clientbound.PlayerInfoAddPlayer{
 			UUID:           pk.UUID(p.UUID),
 			Name:           pk.String(p.Name),
@@ -162,7 +162,7 @@ func (s *Server) sendInitialData(player *ecs.Player) (err error) {
 
 	// also add spawn player packets for players already online
 	// TODO: this logic should be done elsewhere (when players enter range) (tick?)
-	for _, p := range s.playerMap.uuidToPlayer {
+	for _, p := range s.playerMap.connToPlayer {
 		if p.UUID != player.UUID {
 			if err = player.Connection.WritePacket(clientbound.SpawnPlayer{
 				EntityID:   pk.VarInt(p.ID()),

@@ -29,5 +29,7 @@ func main() {
 	MinecraftServer.Host = *host
 	MinecraftServer.Port = uint16(*port)
 
-	logger.Error(MinecraftServer.Start())
+	if err := MinecraftServer.Start(); err != nil {
+		logger.Error(err)
+	}
 }

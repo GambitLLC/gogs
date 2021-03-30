@@ -11,10 +11,12 @@ import (
 	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
+	"gogs/impl/net/packet/packetids"
 	"io/ioutil"
 	"log"
 	"os"
 	"sync"
+	"time"
 )
 
 type playerMapping struct {
@@ -33,10 +35,15 @@ type serverSettings struct {
 type Server struct {
 	serverSettings
 
-	Host         string
-	Port         uint16
-	tickCount    uint64
-	shuttingDown bool
+	Host string
+	Port uint16
+
+	listener  *net.MCListener
+	ticker    *time.Ticker
+	tickCount uint64
+
+	wg       sync.WaitGroup
+	shutdown chan interface{}
 
 	playerMap *playerMapping
 	entityMap map[uint64]interface{}
@@ -45,6 +52,7 @@ type Server struct {
 
 func (s *Server) Start() error {
 	s.init()
+	s.tickLoop()
 	return s.listen()
 }
 
@@ -62,6 +70,9 @@ func (s *Server) init() {
 	s.world = &game.World{
 		WorldName: s.WorldName,
 	}
+
+	// make channels
+	s.shutdown = make(chan interface{})
 }
 
 func (s *Server) loadSettings() error {
@@ -102,22 +113,76 @@ func (s *Server) loadSettings() error {
 	return err
 }
 
-func (s *Server) listen() error {
-	l, err := net.NewListener(s.Host, int(s.Port))
+// tickLoop runs the main server ticking in a separate goroutine.
+func (s *Server) tickLoop() {
+	s.ticker = time.NewTicker(50 * time.Millisecond)
+
+	go func() {
+		for {
+			select {
+			case <-s.shutdown:
+				return
+			case <-s.ticker.C:
+				// do tick stuff
+				s.tickCount++
+			}
+		}
+	}()
+}
+
+func (s *Server) listen() (err error) {
+	s.listener, err = net.NewListener(s.Host, int(s.Port))
 	if err != nil {
-		return err
+		return
 	}
 
 	log.Printf("Server listening for connections on tcp://%s:%d", s.Host, s.Port)
 
+	s.wg.Add(1)
+	defer s.wg.Done()
+
+	var conn net.Conn
 	for {
-		conn, err := l.Accept()
+		conn, err = s.listener.Accept()
 		if err != nil {
-			return err
+			select {
+			case <-s.shutdown:
+				return nil
+			default:
+				return err
+			}
 		}
 
-		go s.handleHandshake(conn)
+		go func() {
+			s.wg.Add(1)
+			s.handleConnection(conn)
+			s.wg.Done()
+		}()
 	}
+}
+
+func (s *Server) stop() {
+	logger.Printf("Shutting down...")
+	close(s.shutdown)
+
+	s.ticker.Stop()
+
+	// send disconnect packet to all connections before closing listener
+	s.playerMap.Lock.Lock()
+	for conn := range s.playerMap.connToPlayer {
+		_ = conn.WritePacket(pk.Marshal(
+			packetids.PlayDisconnect,
+			pk.Chat(chat.NewMessage("Server shut down").AsJSON()),
+		))
+		_ = conn.Close()
+	}
+	s.playerMap.Lock.Unlock()
+
+	// wait for all connection handlers to finish
+	s.wg.Wait()
+
+	// cannot close listener earlier b/c it will close all connections
+	_ = s.listener.Close()
 }
 
 func (s *Server) createPlayer(name string, u uuid.UUID, conn net.Conn) *ecs.Player {
@@ -186,17 +251,8 @@ func (s *Server) playerFromConn(conn net.Conn) *ecs.Player {
 }
 
 func (s *Server) playerFromEntityID(id uint64) *ecs.Player {
-	// todo: consider creating a map
 	// todo: should be getEntity() and not just for players
-	s.playerMap.Lock.RLock()
-	defer s.playerMap.Lock.RUnlock()
-
-	for _, p := range s.playerMap.uuidToPlayer {
-		if p.ID() == id {
-			return p
-		}
-	}
-	return nil
+	return s.entityMap[id].(*ecs.Player)
 }
 
 func (s *Server) Broadcast(text string) {
