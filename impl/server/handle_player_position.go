@@ -7,6 +7,7 @@ import (
 	pk "gogs/impl/net/packet"
 	"gogs/impl/net/packet/clientbound"
 	"gogs/impl/net/packet/serverbound"
+	"time"
 )
 
 func (s *Server) handlePlayerPosition(conn net.Conn, pkt pk.Packet) (err error) {
@@ -74,10 +75,16 @@ func (s *Server) updateViewPosition(player *ecs.Player) (err error) {
 	}
 
 	// send data for the new chunks
+	tick := time.Tick(10 * time.Millisecond)
 	for x, xMap := range newChunks {
 		for z := range xMap {
-			if err = player.Connection.WritePacket(s.chunkDataPacket(x, z)); err != nil {
-				return
+			// slow down chunk packets: sending too many too fast causes client to lag due to rendering?
+			// TODO: determine if issue is something else or if there's another way to fix this
+			select {
+			case <-tick:
+				if err = player.Connection.WritePacket(s.chunkDataPacket(x, z)); err != nil {
+					return
+				}
 			}
 		}
 	}
