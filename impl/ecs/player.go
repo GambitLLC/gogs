@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"github.com/google/uuid"
+	"gogs/impl/data"
 	pk "gogs/impl/net/packet"
 	"sync"
 )
@@ -32,6 +33,28 @@ type Player struct {
 	// per connection data
 	ConnectionComponent
 	KnownChunks ChunkSet
+}
+
+func NewPlayer() *Player {
+	// zero values are not explicitly written
+	return &Player{
+		BasicEntity: NewEntity(data.ProtocolID("minecraft:entity_type", "minecraft:player")),
+		PositionComponent: PositionComponent{
+			X: 0,
+			Y: 90,
+			Z: 0,
+		},
+		SpawnPosition: PositionComponent{
+			X: 0,
+			Y: 90,
+			Z: 0,
+		},
+		HealthComponent: HealthComponent{Health: 20},
+		FoodComponent:   FoodComponent{Food: 20, Saturation: 0},
+		InventoryComponent: InventoryComponent{
+			Inventory: make([]pk.Slot, 46), // https://wiki.vg/Inventory#Player_Inventory,
+		},
+	}
 }
 
 type ChunkSet map[int]map[int]struct{} // x,z map

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	"gogs/api/data/chat"
-	"gogs/impl/data"
 	"gogs/impl/ecs"
 	"gogs/impl/game"
 	"gogs/impl/logger"
@@ -45,9 +44,9 @@ type Server struct {
 	wg       sync.WaitGroup
 	shutdown chan interface{}
 
-	playerMap *playerMapping
-	entityMap map[uint64]interface{}
-	world     *game.World
+	playerMap playerMapping
+	entityMap map[uint64]ecs.Entity
+	world     game.World
 }
 
 func (s *Server) Start() error {
@@ -61,13 +60,13 @@ func (s *Server) init() {
 		panic(err)
 	}
 
-	s.playerMap = &playerMapping{
+	s.playerMap = playerMapping{
 		uuidToPlayer: make(map[uuid.UUID]*ecs.Player),
 		connToPlayer: make(map[net.Conn]*ecs.Player),
 	}
-	s.entityMap = make(map[uint64]interface{})
+	s.entityMap = make(map[uint64]ecs.Entity)
 
-	s.world = &game.World{
+	s.world = game.World{
 		WorldName: s.WorldName,
 	}
 
@@ -197,25 +196,11 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn net.Conn) *ecs.Play
 		return player
 	}
 
-	spawnPos := ecs.PositionComponent{
-		X: 0,
-		Y: 90,
-		Z: 0,
-	}
-	player = &ecs.Player{
-		BasicEntity:         ecs.NewEntity(data.ProtocolID("minecraft:entity_type", "minecraft:player")),
-		PositionComponent:   spawnPos,
-		HealthComponent:     ecs.HealthComponent{Health: 20},
-		FoodComponent:       ecs.FoodComponent{Food: 20, Saturation: 0},
-		ConnectionComponent: ecs.ConnectionComponent{Connection: conn},
-		InventoryComponent: ecs.InventoryComponent{
-			Inventory: make([]pk.Slot, 46), // https://wiki.vg/Inventory#Player_Inventory
-		},
-		SpawnPosition: spawnPos,
-		GameMode:      s.GameMode,
-		UUID:          u,
-		Name:          name,
-	}
+	player = ecs.NewPlayer()
+	player.Connection = conn
+	player.GameMode = s.GameMode
+	player.UUID = u
+	player.Name = name
 
 	// send some starting stacks for now
 	player.Inventory[36] = pk.Slot{
@@ -236,6 +221,7 @@ func (s *Server) createPlayer(name string, u uuid.UUID, conn net.Conn) *ecs.Play
 		ItemCount: 64,
 		NBT:       pk.NBT{},
 	}
+
 	s.playerMap.uuidToPlayer[u] = player
 	s.playerMap.connToPlayer[conn] = player
 	s.entityMap[player.ID()] = player
@@ -250,9 +236,8 @@ func (s *Server) playerFromConn(conn net.Conn) *ecs.Player {
 	return s.playerMap.connToPlayer[conn]
 }
 
-func (s *Server) playerFromEntityID(id uint64) *ecs.Player {
-	// todo: should be getEntity() and not just for players
-	return s.entityMap[id].(*ecs.Player)
+func (s *Server) entityFromID(id uint64) ecs.Entity {
+	return s.entityMap[id]
 }
 
 func (s *Server) Broadcast(text string) {

@@ -22,7 +22,7 @@ func (s *Server) handleInteractEntity(conn net.Conn, pkt pk.Packet) (err error) 
 	switch in.Type {
 	case 0: // interact
 	case 1: // attack
-		player := s.playerFromEntityID(uint64(in.EntityID))
+		player := s.entityFromID(uint64(in.EntityID)).(*ecs.Player)
 		if player == nil {
 			err = fmt.Errorf("interact entity could not find entity with id %d", in.EntityID)
 			break

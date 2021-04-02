@@ -6,6 +6,11 @@ import (
 
 var idCounter uint64
 
+type Entity interface {
+	ID() uint64
+	Type() int32
+}
+
 type BasicEntity struct {
 	id         uint64
 	entityType int32
@@ -22,6 +27,6 @@ func (s BasicEntity) ID() uint64 {
 	return s.id
 }
 
-func (s BasicEntity) EntityType() int32 {
+func (s BasicEntity) Type() int32 {
 	return s.entityType
 }

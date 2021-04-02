@@ -1,7 +1,6 @@
 package server
 
 import (
-	"gogs/impl/data"
 	"gogs/impl/ecs"
 	"gogs/impl/net"
 	pk "gogs/impl/net/packet"
@@ -43,12 +42,9 @@ func (s *Server) handlePlayerDigging(conn net.Conn, pkt pk.Packet) (err error) {
 }
 
 func (s *Server) spawnItem(item pk.Slot, location ecs.PositionComponent) {
-	itemEntity := ecs.ItemEntity{
-		BasicEntity:       ecs.NewEntity(data.ProtocolID("minecraft:entity_type", "minecraft:item")),
-		PositionComponent: location,
-		VelocityComponent: ecs.VelocityComponent{},
-		Item:              item,
-	}
+	itemEntity := ecs.NewItem()
+	itemEntity.PositionComponent = location
+	itemEntity.Slot = item
 
 	s.entityMap[itemEntity.ID()] = itemEntity
 
