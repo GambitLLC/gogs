@@ -27,7 +27,7 @@ func (s *Server) handleInteractEntity(conn net.Conn, pkt pk.Packet) (err error) 
 			err = fmt.Errorf("interact entity could not find entity with id %d", in.EntityID)
 			break
 		}
-		s.handleAttack(s.playerFromConn(conn), player)
+		err = s.handleAttack(s.playerFromConn(conn), player)
 	case 2: // interact at
 	default:
 		_ = conn.Close()
@@ -36,27 +36,34 @@ func (s *Server) handleInteractEntity(conn net.Conn, pkt pk.Packet) (err error) 
 	return
 }
 
-func (s *Server) handleAttack(attacker *ecs.Player, defender *ecs.Player) {
+func (s *Server) handleAttack(attacker *ecs.Player, defender *ecs.Player) (err error) {
 	// TODO: check if attacker is in range of defender
-	// TODO: handle death stuff
+	if defender.Health == 0 {
+		return
+	}
+
 	defender.Health -= 2
 	remainingHealth := defender.Health
-	outPacket := clientbound.UpdateHealth{
-		Health:         pk.Float(remainingHealth),
-		Food:           20.0,
-		FoodSaturation: 0,
-	}.CreatePacket()
 
-	_ = defender.Connection.WritePacket(outPacket)
+	if err = defender.Connection.WritePacket(clientbound.UpdateHealth{
+		Health:         pk.Float(remainingHealth),
+		Food:           pk.VarInt(defender.Food),
+		FoodSaturation: pk.Float(defender.Saturation),
+	}.CreatePacket()); err != nil {
+		return
+	}
 
 	if remainingHealth == 0 {
-		out := clientbound.EntityStatus{
-			EntityID:     pk.Int(defender.ID()),
-			EntityStatus: 3, // LivingEntity play death sound and animation
-		}.CreatePacket()
-		s.broadcastPacket(out, nil)
+		// updating health tells the client to play death animation
+		s.broadcastPacket(clientbound.EntityMetadata{
+			EntityID: pk.VarInt(defender.ID()),
+			Metadata: []clientbound.MetadataField{
+				{Index: 8, Type: 2, Value: pk.Float(defender.Health)}, // HEALTH
+				{Index: 0xFF},
+			},
+		}.CreatePacket(), defender.Connection)
 
-		_ = defender.Connection.WritePacket(clientbound.CombatEvent{
+		err = defender.Connection.WritePacket(clientbound.CombatEvent{
 			PlayerID: pk.VarInt(defender.ID()),
 			EntityID: pk.Int(attacker.ID()),
 			Message:  pk.Chat(chat.NewMessage("You have died").AsJSON()),
@@ -82,4 +89,5 @@ func (s *Server) handleAttack(attacker *ecs.Player, defender *ecs.Player) {
 	}.CreatePacket()
 	s.broadcastPacket(out, nil)
 
+	return
 }
