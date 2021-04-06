@@ -172,8 +172,15 @@ func (s *Server) sendInitialData(player *ecs.Player) (err error) {
 				X:          pk.Double(p.X),
 				Y:          pk.Double(p.Y),
 				Z:          pk.Double(p.Z),
-				Yaw:        pk.Angle(p.Yaw),
-				Pitch:      pk.Angle(p.Pitch),
+				Yaw:        pk.Angle(p.Yaw / 360 * 256),
+				Pitch:      pk.Angle(p.Pitch / 360 * 256),
+			}.CreatePacket()); err != nil {
+				return
+			}
+
+			if err = player.Connection.WritePacket(clientbound.EntityHeadLook{
+				EntityID: pk.VarInt(p.ID()),
+				HeadYaw:  pk.Angle(p.Yaw / 360 * 256),
 			}.CreatePacket()); err != nil {
 				return
 			}

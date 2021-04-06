@@ -51,8 +51,8 @@ func (s *Server) handleClientStatus(conn net.Conn, pkt pk.Packet) (err error) {
 			X:          pk.Double(player.X),
 			Y:          pk.Double(player.Y),
 			Z:          pk.Double(player.Z),
-			Yaw:        pk.Angle(player.Yaw),
-			Pitch:      pk.Angle(player.Pitch),
+			Yaw:        pk.Angle(player.Yaw / 360 * 256),
+			Pitch:      pk.Angle(player.Pitch / 360 * 256),
 		}.CreatePacket(), conn)
 	case 1: // Request stats
 	default:
