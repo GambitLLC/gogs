@@ -21,6 +21,7 @@ func (s *Server) handleChatMessage(conn net.Conn, pkt pk.Packet) (err error) {
 	// TODO: MOVE THIS INTO COMMAND HANDLER
 	if m.Message == "/stop" {
 		s.stop()
+		return
 	}
 
 	msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name, m.Message))

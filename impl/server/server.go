@@ -41,7 +41,6 @@ type Server struct {
 	ticker    *time.Ticker
 	tickCount uint64
 
-	wg       sync.WaitGroup
 	shutdown chan interface{}
 
 	playerMap playerMapping
@@ -137,9 +136,6 @@ func (s *Server) listen() (err error) {
 
 	log.Printf("Server listening for connections on tcp://%s:%d", s.Host, s.Port)
 
-	s.wg.Add(1)
-	defer s.wg.Done()
-
 	var conn net.Conn
 	for {
 		conn, err = s.listener.Accept()
@@ -153,9 +149,7 @@ func (s *Server) listen() (err error) {
 		}
 
 		go func() {
-			s.wg.Add(1)
 			s.handleConnection(conn)
-			s.wg.Done()
 		}()
 	}
 }
@@ -176,9 +170,6 @@ func (s *Server) stop() {
 		_ = conn.Close()
 	}
 	s.playerMap.Lock.Unlock()
-
-	// wait for all connection handlers to finish
-	s.wg.Wait()
 
 	// cannot close listener earlier b/c it will close all connections
 	_ = s.listener.Close()
