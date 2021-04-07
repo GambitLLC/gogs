@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"gogs/chat"
 	"gogs/logger"
 	"gogs/net"
 	pk "gogs/net/packet"
@@ -9,6 +10,7 @@ import (
 	"gogs/net/packet/packetids"
 	"gogs/net/packet/serverbound"
 	"io"
+	"time"
 )
 
 type connectionState uint8
@@ -207,12 +209,45 @@ func (s *Server) handleLogin(conn net.Conn) error {
 }
 
 func (s *Server) handlePlay(conn net.Conn) (err error) {
-	// block this goroutine to keep connection up
 	var pkt pk.Packet
+	var keepAliveID, receivedKeepAliveID int64
+	var alive = true
+
+	// send keep alive packets
+	go func() {
+		var t time.Time
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for ; true; t = <-ticker.C {
+			// didn't receive a timely keep alive
+			if receivedKeepAliveID != keepAliveID {
+				alive = false
+				_ = conn.WritePacket(pk.Marshal(
+					packetids.PlayDisconnect,
+					pk.Chat(chat.NewMessage("Kicked due to keep alive timeout").AsJSON()),
+				))
+				_ = conn.Close()
+			}
+
+			keepAliveID = t.UnixNano()
+			if err = conn.WritePacket(clientbound.KeepAlive{
+				ID: pk.Long(keepAliveID),
+			}.CreatePacket()); err != nil {
+				_ = conn.Close()
+				return
+			}
+		}
+	}()
+
+	// block this goroutine to keep connection up
 	for {
 		pkt, err = conn.ReadPacket()
 		if err != nil {
-			return err
+			if !alive {
+				err = nil // connection was closed due to keep alive timeout
+			}
+			return
 		}
 
 		switch pkt.ID {
@@ -247,24 +282,31 @@ func (s *Server) handlePlay(conn net.Conn) (err error) {
 		case packetids.HeldItemChangeServerbound:
 			var slot pk.Short
 			if err = pkt.Unmarshal(&slot); err != nil {
-				return err
+				return
 			}
 			player := s.playerFromConn(conn)
 			player.HeldItem = uint8(slot)
-
 		case packetids.KeepAliveServerbound:
 			logger.Printf("Received keep alive")
-			//TODO: kick client for incorrect / untimely Keep-Alive response
 			k := serverbound.KeepAlive{}
 			if err = k.FromPacket(pkt); err != nil {
 				return
+			}
+
+			if receivedKeepAliveID = int64(k.ID); receivedKeepAliveID != keepAliveID {
+				_ = conn.WritePacket(pk.Marshal(
+					packetids.PlayDisconnect,
+					pk.Chat(chat.NewMessage("Kicked due to invalid keep alive ID").AsJSON()),
+				))
+				_ = conn.Close()
+				return nil
 			}
 		default:
 			logger.Printf("packet id 0x%02X not yet implemented", pkt.ID)
 		}
 
 		if err != nil {
-			return err
+			return
 		}
 	}
 }

@@ -148,9 +148,9 @@ func (s *Server) listen() (err error) {
 			}
 		}
 
-		go func() {
-			s.handleConnection(conn)
-		}()
+		go func(c net.Conn) {
+			s.handleConnection(c)
+		}(conn)
 	}
 }
 
