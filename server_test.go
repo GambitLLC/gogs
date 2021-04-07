@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gogs/impl/server"
+	"gogs/server"
 	"testing"
 )
 

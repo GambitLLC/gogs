@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"gogs/impl/logger"
-	"gogs/impl/server"
+	"gogs/logger"
+	"gogs/server"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
