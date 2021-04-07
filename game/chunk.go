@@ -101,7 +101,10 @@ func (s *chunkSection) SetBlock(x int, y int, z int, blockID int32) {
 		paletteIndex = uint8(len(s.Palette))
 		s.paletteMap[blockID] = paletteIndex
 		s.Palette = append(s.Palette, blockID)
-		// TODO: change BlockStates BitsPerValue if palette size increases too much
+
+		if len(s.Palette) > (1 << s.BlockStates.BitsPerValue) {
+			s.BlockStates.upsize(s.BlockStates.BitsPerValue + 1)
+		}
 	}
 
 	s.BlockStates.set(256*y+16*z+x, int64(paletteIndex))
@@ -115,9 +118,9 @@ type compactedDataArray struct {
 	bitMask       int64
 }
 
-func newCompactedDataArray(bitsPervalue int, capacity int) compactedDataArray {
+func newCompactedDataArray(bitsPerValue int, capacity int) compactedDataArray {
 	v := compactedDataArray{}
-	v.init(bitsPervalue, capacity)
+	v.init(bitsPerValue, capacity)
 	return v
 }
 
@@ -177,6 +180,14 @@ func (s *compactedDataArray) set(index int, val int64) {
 			s.Data[dataIndex] |= val >> (64 - dataShift)
 		}
 	*/
+}
+
+func (s *compactedDataArray) upsize(newBitsPerValue int) {
+	v := newCompactedDataArray(newBitsPerValue, s.capacity)
+	for i := 0; i < s.capacity; i++ {
+		v.set(i, s.get(i))
+	}
+	*s = v
 }
 
 // anvilColumn is [16]anvilChunkSection
