@@ -75,33 +75,39 @@ func (s *Server) updateViewPosition(player *entities.Player) (err error) {
 	}
 
 	// send data for the new chunks
-	tick := time.Tick(10 * time.Millisecond)
-	for x, xMap := range newChunks {
-		for z := range xMap {
-			// slow down chunk packets: sending too many too fast causes client to lag due to rendering?
-			// TODO: determine if issue is something else or if there's another way to fix this
-			select {
-			case <-tick:
-				if err = player.Connection.WritePacket(s.chunkDataPacket(x, z)); err != nil {
+	go func() {
+		ticker := time.NewTicker(12 * time.Millisecond)
+		defer ticker.Stop()
+		for x, xMap := range newChunks {
+			for z := range xMap {
+				// slow down chunk packets: sending too many too fast causes client to lag due to rendering?
+				// TODO: determine if issue is something else or if there's another way to fix this
+				select {
+				case <-ticker.C:
+					if player.Connection == nil {
+						return
+					}
+					if err = player.Connection.WritePacket(s.chunkDataPacket(x, z)); err != nil {
+						return
+					}
+				}
+			}
+		}
+
+		// remove old chunks and send unload chunk packet
+		for x, xMap := range prevChunks {
+			for z := range xMap {
+				player.KnownChunks.Remove(x, z)
+				unload := clientbound.UnloadChunk{
+					ChunkX: pk.Int(x),
+					ChunkZ: pk.Int(z),
+				}
+				if err = player.Connection.WritePacket(unload.CreatePacket()); err != nil {
 					return
 				}
 			}
 		}
-	}
+	}()
 
-	// remove old chunks and send unload chunk packet
-	for x, xMap := range prevChunks {
-		for z := range xMap {
-			player.KnownChunks.Remove(x, z)
-			unload := clientbound.UnloadChunk{
-				ChunkX: pk.Int(x),
-				ChunkZ: pk.Int(z),
-			}
-			if err = player.Connection.WritePacket(unload.CreatePacket()); err != nil {
-				return
-			}
-		}
-	}
-
-	return nil
+	return
 }
