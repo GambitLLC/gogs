@@ -7,13 +7,13 @@ import (
 type Message struct {
 	Text string `json:"text"`
 
-	Bold          *bool `json:"bold,boolean,omitempty"`
-	Italic        *bool `json:"italic,boolean,omitempty"`
-	Underlined    *bool `json:"underlined,boolean,omitempty"`
-	Strikethrough *bool `json:"strikethrough,boolean,omitempty"`
-	Obfuscated    *bool `json:"obfuscated,boolean,omitempty"`
+	Bold          bool `json:"bold,boolean,omitempty"`
+	Italic        bool `json:"italic,boolean,omitempty"`
+	Underlined    bool `json:"underlined,boolean,omitempty"`
+	Strikethrough bool `json:"strikethrough,boolean,omitempty"`
+	Obfuscated    bool `json:"obfuscated,boolean,omitempty"`
 
-	Color int `json:"color,string,omitempty"`
+	Color string `json:"color,omitempty"`
 
 	Extra []*Message `json:"extra,omitempty"`
 }

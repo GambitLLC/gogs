@@ -232,12 +232,12 @@ func (s *Server) entityFromID(id uint64) entities.Entity {
 }
 
 func (s *Server) Broadcast(text string) {
-	// TODO: figure out chat colors
-	logger.Printf(text)
-	msg := chat.NewMessage("§e" + text)
+	msg := chat.NewMessage(text)
+	msg.Color = "yellow"
+	logger.Printf(msg.AsJSON())
 	pkt := clientbound.ChatMessage{
 		JSONData: pk.Chat(msg.AsJSON()),
-		Position: 1, // TODO: define chat positions as enum
+		Position: 0, // TODO: define chat positions as enum
 		Sender:   pk.UUID{},
 	}.CreatePacket()
 
