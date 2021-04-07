@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"gogs/chat"
 	"gogs/logger"
 	"gogs/net"
@@ -24,10 +23,15 @@ func (s *Server) handleChatMessage(conn net.Conn, pkt pk.Packet) (err error) {
 		return
 	}
 
-	msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name, m.Message))
+	msg := chat.NewTranslationComponent(
+		"chat.type.text", // "<%s> %s"
+		chat.NewStringComponent(player.Name),
+		chat.NewStringComponent(string(m.Message)),
+	)
+
 	tmp := clientbound.ChatMessage{
 		JSONData: pk.Chat(msg.AsJSON()),
-		Position: 0,
+		Position: chat.Chat,
 		Sender:   pk.UUID(player.UUID),
 	}.CreatePacket()
 
@@ -44,7 +48,7 @@ func (s *Server) handleChatMessage(conn net.Conn, pkt pk.Packet) (err error) {
 		}
 
 		// create message event
-		msg := chat.NewMessage(fmt.Sprintf("%s: %s", player.Name, m.Message))
+		msg := chat.NewStringComponent(fmt.Sprintf("%s: %s", player.Name, m.Message))
 		event := events.PlayerChatData{
 			Player:     player,
 			Recipients: players,

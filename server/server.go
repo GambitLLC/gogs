@@ -165,7 +165,7 @@ func (s *Server) stop() {
 	for conn := range s.playerMap.connToPlayer {
 		_ = conn.WritePacket(pk.Marshal(
 			packetids.PlayDisconnect,
-			pk.Chat(chat.NewMessage("Server shut down").AsJSON()),
+			pk.Chat(chat.NewStringComponent("Server shut down").AsJSON()),
 		))
 		_ = conn.Close()
 	}
@@ -232,12 +232,12 @@ func (s *Server) entityFromID(id uint64) entities.Entity {
 }
 
 func (s *Server) Broadcast(text string) {
-	msg := chat.NewMessage(text)
+	msg := chat.NewStringComponent(text)
 	msg.Color = "yellow"
-	logger.Printf(msg.AsJSON())
+
 	pkt := clientbound.ChatMessage{
 		JSONData: pk.Chat(msg.AsJSON()),
-		Position: 0, // TODO: define chat positions as enum
+		Position: chat.System,
 		Sender:   pk.UUID{},
 	}.CreatePacket()
 

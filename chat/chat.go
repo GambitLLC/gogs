@@ -4,22 +4,39 @@ import (
 	"encoding/json"
 )
 
+const (
+	Chat     = 0
+	System   = 1
+	GameInfo = 2
+)
+
 type Message struct {
-	Text string `json:"text"`
+	// String component
+	Text string `json:"text,omitempty"`
 
-	Bold          bool `json:"bold,boolean,omitempty"`
-	Italic        bool `json:"italic,boolean,omitempty"`
-	Underlined    bool `json:"underlined,boolean,omitempty"`
-	Strikethrough bool `json:"strikethrough,boolean,omitempty"`
-	Obfuscated    bool `json:"obfuscated,boolean,omitempty"`
+	// Translation component
+	Translate string    `json:"translate,omitempty"`
+	With      []Message `json:"with,omitempty"`
 
-	Color string `json:"color,omitempty"`
-
-	Extra []*Message `json:"extra,omitempty"`
+	// Common
+	Bold          bool      `json:"bold,boolean,omitempty"`
+	Italic        bool      `json:"italic,boolean,omitempty"`
+	Underlined    bool      `json:"underlined,boolean,omitempty"`
+	Strikethrough bool      `json:"strikethrough,boolean,omitempty"`
+	Obfuscated    bool      `json:"obfuscated,boolean,omitempty"`
+	Color         string    `json:"color,omitempty"`
+	Extra         []Message `json:"extra,omitempty"`
 }
 
-func NewMessage(text string) Message {
+func NewStringComponent(text string) Message {
 	return Message{Text: text}
+}
+
+func NewTranslationComponent(key string, with ...Message) Message {
+	m := Message{Translate: key}
+	m.With = make([]Message, len(with))
+	copy(m.With, with)
+	return m
 }
 
 func (m Message) AsJSON() string {
@@ -33,11 +50,8 @@ func (m Message) AsJSON() string {
 func (m *Message) Append(msgs ...Message) {
 	length := len(m.Extra) + len(msgs)
 	// expand array to make appending faster
-	extra := make([]*Message, length)
+	extra := make([]Message, length)
 	copy(extra, m.Extra)
+	copy(extra[len(m.Extra):], msgs)
 	m.Extra = extra
-
-	for _, v := range msgs {
-		m.Extra = append(m.Extra, &v)
-	}
 }

@@ -66,7 +66,7 @@ func (s *Server) handleAttack(attacker *entities.Player, defender *entities.Play
 		err = defender.Connection.WritePacket(clientbound.CombatEvent{
 			PlayerID: pk.VarInt(defender.ID()),
 			EntityID: pk.Int(attacker.ID()),
-			Message:  pk.Chat(chat.NewMessage("You have died").AsJSON()),
+			Message:  pk.Chat(chat.NewStringComponent("You have died").AsJSON()),
 		}.CreatePacket())
 		return
 	}

@@ -225,7 +225,7 @@ func (s *Server) handlePlay(conn net.Conn) (err error) {
 				alive = false
 				_ = conn.WritePacket(pk.Marshal(
 					packetids.PlayDisconnect,
-					pk.Chat(chat.NewMessage("Kicked due to keep alive timeout").AsJSON()),
+					pk.Chat(chat.NewStringComponent("Kicked due to keep alive timeout").AsJSON()),
 				))
 				_ = conn.Close()
 			}
@@ -296,7 +296,7 @@ func (s *Server) handlePlay(conn net.Conn) (err error) {
 			if receivedKeepAliveID = int64(k.ID); receivedKeepAliveID != keepAliveID {
 				_ = conn.WritePacket(pk.Marshal(
 					packetids.PlayDisconnect,
-					pk.Chat(chat.NewMessage("Kicked due to invalid keep alive ID").AsJSON()),
+					pk.Chat(chat.NewStringComponent("Kicked due to invalid keep alive ID").AsJSON()),
 				))
 				_ = conn.Close()
 				return nil

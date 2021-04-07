@@ -41,6 +41,8 @@ func (s *Server) handleLoginStart(conn net.Conn, pkt pk.Packet) (err error) {
 			return err
 		}
 
+		s.Broadcast(fmt.Sprintf("%v has joined the game", name))
+
 		player := s.createPlayer(string(name), u, conn)
 
 		err = conn.WritePacket(s.joinGamePacket(player))
@@ -55,7 +57,6 @@ func (s *Server) handleLoginStart(conn net.Conn, pkt pk.Packet) (err error) {
 			}
 			events.PlayerJoinEvent.Trigger(&event)
 		*/
-		s.Broadcast(fmt.Sprintf("%v has joined the game", player.Name))
 
 		// send out new player info to everyone already online
 		playerInfoPacket := clientbound.PlayerInfo{
