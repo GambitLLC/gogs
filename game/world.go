@@ -2,7 +2,7 @@ package game
 
 import (
 	"fmt"
-	"gogs/data"
+	"github.com/GambitLLC/gogs/data"
 	"math"
 )
 

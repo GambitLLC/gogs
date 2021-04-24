@@ -1,8 +1,8 @@
 package entities
 
 import (
-	"gogs/net"
-	pk "gogs/net/packet"
+	"github.com/GambitLLC/gogs/net"
+	pk "github.com/GambitLLC/gogs/net/packet"
 	"sync"
 )
 

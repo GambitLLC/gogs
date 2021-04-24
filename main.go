@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"gogs/logger"
-	"gogs/server"
+	"github.com/GambitLLC/gogs/logger"
+	"github.com/GambitLLC/gogs/server"
 	"log"
 	"net/http"
 	_ "net/http/pprof"

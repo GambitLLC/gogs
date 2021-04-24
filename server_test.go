@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gogs/server"
+	"github.com/GambitLLC/gogs/server"
 	"testing"
 )
 

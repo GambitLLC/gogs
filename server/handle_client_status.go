@@ -2,9 +2,9 @@ package server
 
 import (
 	"fmt"
-	"gogs/net"
-	pk "gogs/net/packet"
-	"gogs/net/packet/clientbound"
+	"github.com/GambitLLC/gogs/net"
+	pk "github.com/GambitLLC/gogs/net/packet"
+	"github.com/GambitLLC/gogs/net/packet/clientbound"
 )
 
 func (s *Server) handleClientStatus(conn net.Conn, pkt pk.Packet) (err error) {

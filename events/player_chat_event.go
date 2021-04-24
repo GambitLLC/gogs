@@ -1,8 +1,8 @@
 package events
 
 import (
-	"gogs/chat"
-	"gogs/entities"
+	"github.com/GambitLLC/gogs/chat"
+	"github.com/GambitLLC/gogs/entities"
 )
 
 var PlayerChatEvent playerChatEvent

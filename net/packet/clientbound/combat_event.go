@@ -1,8 +1,8 @@
 package clientbound
 
 import (
-	pk "gogs/net/packet"
-	"gogs/net/packet/packetids"
+	pk "github.com/GambitLLC/gogs/net/packet"
+	"github.com/GambitLLC/gogs/net/packet/packetids"
 )
 
 // https://wiki.vg/Protocol#Combat_Event

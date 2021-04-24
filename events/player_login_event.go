@@ -1,7 +1,7 @@
 package events
 
 import (
-	"gogs/net"
+	"github.com/GambitLLC/gogs/net"
 )
 
 type PlayerLoginResult int8

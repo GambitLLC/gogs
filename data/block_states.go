@@ -2,7 +2,7 @@ package data
 
 import (
 	"encoding/json"
-	"gogs/logger"
+	"github.com/GambitLLC/gogs/logger"
 	"io/ioutil"
 	"os"
 )

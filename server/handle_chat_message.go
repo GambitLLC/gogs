@@ -1,12 +1,12 @@
 package server
 
 import (
-	"gogs/chat"
-	"gogs/logger"
-	"gogs/net"
-	pk "gogs/net/packet"
-	"gogs/net/packet/clientbound"
-	"gogs/net/packet/serverbound"
+	"github.com/GambitLLC/gogs/chat"
+	"github.com/GambitLLC/gogs/logger"
+	"github.com/GambitLLC/gogs/net"
+	pk "github.com/GambitLLC/gogs/net/packet"
+	"github.com/GambitLLC/gogs/net/packet/clientbound"
+	"github.com/GambitLLC/gogs/net/packet/serverbound"
 )
 
 func (s *Server) handleChatMessage(conn net.Conn, pkt pk.Packet) (err error) {

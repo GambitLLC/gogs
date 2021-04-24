@@ -1,7 +1,7 @@
 package events
 
 import (
-	"gogs/entities"
+	"github.com/GambitLLC/gogs/entities"
 )
 
 var PlayerJoinEvent playerJoinEvent

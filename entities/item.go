@@ -1,8 +1,8 @@
 package entities
 
 import (
-	"gogs/data"
-	pk "gogs/net/packet"
+	"github.com/GambitLLC/gogs/data"
+	pk "github.com/GambitLLC/gogs/net/packet"
 )
 
 type Item struct {

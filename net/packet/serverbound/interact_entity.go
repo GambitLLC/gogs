@@ -2,7 +2,7 @@ package serverbound
 
 import (
 	"bytes"
-	pk "gogs/net/packet"
+	pk "github.com/GambitLLC/gogs/net/packet"
 )
 
 type InteractEntity struct {

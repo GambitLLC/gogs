@@ -2,7 +2,7 @@ package net
 
 import (
 	"bufio"
-	pk "gogs/net/packet"
+	pk "github.com/GambitLLC/gogs/net/packet"
 	"net"
 	"strconv"
 )

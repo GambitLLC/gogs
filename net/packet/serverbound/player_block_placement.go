@@ -1,6 +1,6 @@
 package serverbound
 
-import pk "gogs/net/packet"
+import pk "github.com/GambitLLC/gogs/net/packet"
 
 type PlayerBlockPlacement struct {
 	Hand            pk.VarInt

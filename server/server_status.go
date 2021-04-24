@@ -2,9 +2,9 @@ package server
 
 import (
 	"encoding/json"
-	"gogs/logger"
-	pk "gogs/net/packet"
-	"gogs/net/packet/clientbound"
+	"github.com/GambitLLC/gogs/logger"
+	pk "github.com/GambitLLC/gogs/net/packet"
+	"github.com/GambitLLC/gogs/net/packet/clientbound"
 )
 
 func (s *Server) statusPacket() (pk.Packet, error) {

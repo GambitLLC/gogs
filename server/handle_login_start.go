@@ -2,13 +2,13 @@ package server
 
 import (
 	"fmt"
-	"gogs/entities"
-	"gogs/events"
-	"gogs/logger"
-	"gogs/net"
-	pk "gogs/net/packet"
-	"gogs/net/packet/clientbound"
-	"gogs/net/packet/packetids"
+	"github.com/GambitLLC/gogs/entities"
+	"github.com/GambitLLC/gogs/events"
+	"github.com/GambitLLC/gogs/logger"
+	"github.com/GambitLLC/gogs/net"
+	pk "github.com/GambitLLC/gogs/net/packet"
+	"github.com/GambitLLC/gogs/net/packet/clientbound"
+	"github.com/GambitLLC/gogs/net/packet/packetids"
 )
 
 func (s *Server) handleLoginStart(conn net.Conn, pkt pk.Packet) (err error) {

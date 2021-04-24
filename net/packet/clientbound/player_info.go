@@ -2,8 +2,8 @@ package clientbound
 
 import (
 	"bytes"
-	pk "gogs/net/packet"
-	"gogs/net/packet/packetids"
+	pk "github.com/GambitLLC/gogs/net/packet"
+	"github.com/GambitLLC/gogs/net/packet/packetids"
 )
 
 type PlayerInfo struct {

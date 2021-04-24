@@ -1,6 +1,6 @@
 package serverbound
 
-import pk "gogs/net/packet"
+import pk "github.com/GambitLLC/gogs/net/packet"
 
 type ClientSettings struct {
 	Locale             pk.String

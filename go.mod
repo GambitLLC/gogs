@@ -1,4 +1,4 @@
-module gogs
+module github.com/GambitLLC/gogs
 
 go 1.16
 
