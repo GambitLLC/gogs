@@ -2,45 +2,11 @@ package server
 
 import (
 	"github.com/GambitLLC/gogs/entities"
-	"github.com/GambitLLC/gogs/net"
 	pk "github.com/GambitLLC/gogs/net/packet"
 	"github.com/GambitLLC/gogs/net/packet/clientbound"
-	"github.com/GambitLLC/gogs/net/packet/serverbound"
 )
 
-func (s *Server) handlePlayerDigging(conn net.Conn, pkt pk.Packet) (err error) {
-	in := serverbound.PlayerDigging{}
-	if err = in.FromPacket(pkt); err != nil {
-		return
-	}
-
-	player := s.playerFromConn(conn)
-
-	switch in.Status {
-	case 4: // Drop item
-		player.InventoryLock.Lock()
-		item := &player.Inventory[player.HeldItem+36]
-		if item.Present {
-			s.spawnItem(pk.Slot{
-				Present:   true,
-				ItemID:    item.ItemID,
-				ItemCount: 1,
-				NBT:       item.NBT,
-			}, player.PositionComponent)
-
-			item.ItemCount -= 1
-			if item.ItemCount == 0 {
-				item.Present = false
-				item.ItemID = 0
-			}
-		}
-		player.InventoryLock.Unlock()
-
-	}
-
-	return
-}
-
+// todo: put this into some entity manager
 func (s *Server) spawnItem(item pk.Slot, location entities.PositionComponent) {
 	itemEntity := entities.NewItem()
 	itemEntity.PositionComponent = location

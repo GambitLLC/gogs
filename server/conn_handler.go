@@ -253,33 +253,33 @@ func (s *Server) handlePlay(conn net.Conn) (err error) {
 
 		switch pkt.ID {
 		case packetids.ClientSettings:
-			err = s.handleClientSettings(conn, pkt)
+			err = s.onClientSettings(conn, pkt)
 		case packetids.TeleportConfirm:
 			// TODO: Handle this
 			logger.Printf("Received teleport confirm")
 		case packetids.ChatMessageServerbound:
-			err = s.handleChatMessage(conn, pkt)
+			err = s.onChatMessage(conn, pkt)
 		case packetids.PlayerPosition:
 			// TODO: Handle all player pos & rotation packets
-			err = s.handlePlayerPosition(conn, pkt)
+			err = s.onPlayerPosition(conn, pkt)
 		case packetids.PlayerPositionAndRotationServerbound:
-			err = s.handlePlayerPositionAndRotation(conn, pkt)
+			err = s.onPlayerPositionAndRotation(conn, pkt)
 		case packetids.PlayerRotation:
-			err = s.handlePlayerRotation(conn, pkt)
+			err = s.onPlayerRotation(conn, pkt)
 		case packetids.Animation:
-			err = s.handleAnimation(conn, pkt)
+			err = s.onAnimation(conn, pkt)
 		case packetids.EntityAction:
-			err = s.handleEntityAction(conn, pkt)
+			err = s.onEntityAction(conn, pkt)
 		case packetids.InteractEntity:
-			err = s.handleInteractEntity(conn, pkt)
+			err = s.onInteractEntity(conn, pkt)
 		case packetids.ClientStatus:
-			err = s.handleClientStatus(conn, pkt)
+			err = s.onClientStatus(conn, pkt)
 		case packetids.ClickWindow:
-			err = s.handleClickWindow(conn, pkt)
+			err = s.onClickWindow(conn, pkt)
 		case packetids.PlayerDigging:
-			err = s.handlePlayerDigging(conn, pkt)
+			err = s.onPlayerDigging(conn, pkt)
 		case packetids.PlayerBlockPlacement:
-			err = s.handlePlayerBlockPlacement(conn, pkt)
+			err = s.onPlayerBlockPlacement(conn, pkt)
 		case packetids.HeldItemChangeServerbound:
 			var slot pk.Short
 			if err = pkt.Unmarshal(&slot); err != nil {

@@ -1,35 +1,32 @@
 package server
 
 import (
+	"time"
+
 	"github.com/GambitLLC/gogs/entities"
-	"github.com/GambitLLC/gogs/logger"
-	"github.com/GambitLLC/gogs/net"
 	pk "github.com/GambitLLC/gogs/net/packet"
 	"github.com/GambitLLC/gogs/net/packet/clientbound"
-	"github.com/GambitLLC/gogs/net/packet/serverbound"
 )
 
-func (s *Server) handleClientSettings(conn net.Conn, pkt pk.Packet) (err error) {
-	logger.Printf("Received client settings")
-	in := serverbound.ClientSettings{}
-	if err = in.FromPacket(pkt); err != nil {
-		return
-	}
-
-	player := s.playerFromConn(conn)
-
-	player.ChatMode = uint8(in.ChatMode)
-	player.ViewDistance = byte(in.ViewDistance)
-	if player.ViewDistance > s.ViewDistance {
-		player.ViewDistance = s.ViewDistance
-	}
-
-	if !player.Online {
-		player.Online = true
-		err = s.sendInitialData(player)
-	}
-
-	return
+func (s *Server) joinGamePacket(player *entities.Player) pk.Packet {
+	return clientbound.JoinGame{
+		EntityID:       pk.Int(player.ID()),
+		IsHardcore:     false,
+		Gamemode:       pk.UByte(player.GameMode),
+		PrevGamemode:   -1,
+		WorldCount:     1,
+		WorldNames:     []pk.Identifier{"world"},
+		DimensionCodec: pk.NBT{V: clientbound.MinecraftDimensionCodec},
+		Dimension:      pk.NBT{V: clientbound.MinecraftOverworld},
+		WorldName:      "world",
+		HashedSeed:     0,
+		MaxPlayers:     pk.VarInt(s.MaxPlayers),
+		ViewDistance:   pk.VarInt(s.ViewDistance),
+		RDI:            false,
+		ERS:            false,
+		IsDebug:        false,
+		IsFlat:         true,
+	}.CreatePacket()
 }
 
 // sendInitialData returns all the packets that a client typically needs when joining the game encoded
@@ -250,4 +247,72 @@ func (s *Server) chunkDataPacket(x int, z int) pk.Packet {
 		NumBlockEntities: pk.VarInt(len(blockEntities)),
 		BlockEntities:    blockEntities,
 	}.CreatePacket()
+}
+
+func (s *Server) updateViewPosition(player *entities.Player) (err error) {
+	if err = player.Connection.WritePacket(clientbound.UpdateViewPosition{
+		ChunkX: pk.VarInt(int(player.X) >> 4),
+		ChunkZ: pk.VarInt(int(player.Z) >> 4),
+	}.CreatePacket()); err != nil {
+		return
+	}
+
+	chunkX := int(player.X) >> 4
+	chunkZ := int(player.Z) >> 4
+
+	prevChunks := make(entities.ChunkSet)
+	for x, xMap := range player.KnownChunks {
+		for z := range xMap {
+			prevChunks.Add(x, z)
+		}
+	}
+
+	newChunks := make(entities.ChunkSet)
+
+	viewDistance := int(player.ViewDistance)
+	for x := chunkX - viewDistance; x <= chunkX+viewDistance; x++ {
+		for z := chunkZ - viewDistance; z <= chunkZ+viewDistance; z++ {
+			if player.KnownChunks.Contains(x, z) {
+				prevChunks.Remove(x, z)
+			} else {
+				newChunks.Add(x, z)
+				player.KnownChunks.Add(x, z)
+			}
+		}
+	}
+
+	// send data for the new chunks
+	go func() {
+		ticker := time.NewTicker(12 * time.Millisecond)
+		defer ticker.Stop()
+		for x, xMap := range newChunks {
+			for z := range xMap {
+				// slow down chunk packets: sending too many too fast causes client to lag due to rendering?
+				// TODO: determine if issue is something else or if there's another way to fix this
+				<-ticker.C
+				if player.Connection == nil {
+					return
+				}
+				if err = player.Connection.WritePacket(s.chunkDataPacket(x, z)); err != nil {
+					return
+				}
+			}
+		}
+
+		// remove old chunks and send unload chunk packet
+		for x, xMap := range prevChunks {
+			for z := range xMap {
+				player.KnownChunks.Remove(x, z)
+				unload := clientbound.UnloadChunk{
+					ChunkX: pk.Int(x),
+					ChunkZ: pk.Int(z),
+				}
+				if err = player.Connection.WritePacket(unload.CreatePacket()); err != nil {
+					return
+				}
+			}
+		}
+	}()
+
+	return
 }

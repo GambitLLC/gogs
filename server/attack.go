@@ -1,41 +1,13 @@
 package server
 
 import (
-	"fmt"
 	"github.com/GambitLLC/gogs/chat"
 	"github.com/GambitLLC/gogs/entities"
-	"github.com/GambitLLC/gogs/logger"
-	"github.com/GambitLLC/gogs/net"
 	pk "github.com/GambitLLC/gogs/net/packet"
 	"github.com/GambitLLC/gogs/net/packet/clientbound"
-	"github.com/GambitLLC/gogs/net/packet/serverbound"
 )
 
-func (s *Server) handleInteractEntity(conn net.Conn, pkt pk.Packet) (err error) {
-	in := serverbound.InteractEntity{}
-	if err = in.FromPacket(pkt); err != nil {
-		return
-	}
-
-	logger.Printf("received interact entity")
-
-	switch in.Type {
-	case 0: // interact
-	case 1: // attack
-		player := s.entityFromID(uint64(in.EntityID)).(*entities.Player)
-		if player == nil {
-			err = fmt.Errorf("interact entity could not find entity with id %d", in.EntityID)
-			break
-		}
-		err = s.handleAttack(s.playerFromConn(conn), player)
-	case 2: // interact at
-	default:
-		_ = conn.Close()
-		err = fmt.Errorf("interact entity got invalid type %d", in.Type)
-	}
-	return
-}
-
+// TODO: move this into player?
 func (s *Server) handleAttack(attacker *entities.Player, defender *entities.Player) (err error) {
 	// TODO: check if attacker is in range of defender
 	if defender.Health == 0 {

@@ -9,7 +9,7 @@ import (
 	"github.com/GambitLLC/gogs/net/packet/serverbound"
 )
 
-func (s *Server) handleClickWindow(conn net.Conn, pkt pk.Packet) (err error) {
+func (s *Server) onClickWindow(conn net.Conn, pkt pk.Packet) (err error) {
 	in := serverbound.ClickWindow{}
 	if err = in.FromPacket(pkt); err != nil {
 		return
