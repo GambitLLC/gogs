@@ -2,6 +2,9 @@ package server
 
 import (
 	"fmt"
+	"io"
+	"time"
+
 	"github.com/GambitLLC/gogs/chat"
 	"github.com/GambitLLC/gogs/logger"
 	"github.com/GambitLLC/gogs/net"
@@ -9,17 +12,15 @@ import (
 	"github.com/GambitLLC/gogs/net/packet/clientbound"
 	"github.com/GambitLLC/gogs/net/packet/packetids"
 	"github.com/GambitLLC/gogs/net/packet/serverbound"
-	"io"
-	"time"
 )
 
 type connectionState uint8
 
 const (
 	handshakeState connectionState = 0
-	statusState                    = 1
-	loginState                     = 2
-	playState                      = 3
+	statusState    connectionState = 1
+	loginState     connectionState = 2
+	playState      connectionState = 3
 )
 
 func (c connectionState) String() string {
@@ -100,7 +101,7 @@ func (s *Server) handleHandshake(conn net.Conn) (connectionState, error) {
 		return 0, err
 	}
 
-	if nextState != statusState && nextState != loginState {
+	if connectionState(nextState) != statusState && connectionState(nextState) != loginState {
 		return 0, fmt.Errorf("received invalid next state %d", nextState)
 	}
 
@@ -205,7 +206,7 @@ func (s *Server) handleLogin(conn net.Conn) error {
 		return fmt.Errorf("login state expected LoginStart, received 0x%02X instead", pkt.ID)
 	}
 
-	return s.handleLoginStart(conn, pkt)
+	return s.onLoginStart(conn, pkt)
 }
 
 func (s *Server) handlePlay(conn net.Conn) (err error) {

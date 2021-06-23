@@ -73,22 +73,6 @@ type DimensionType struct {
 	HasCeiling         byte    `nbt:"has_ceiling"`
 }
 
-var MinecraftOverworld = DimensionType{
-	PiglinSafe:         0,
-	Natural:            1,
-	AmbientLight:       0.0,
-	Infiniburn:         "minecraft:infiniburn_overworld",
-	RespawnAnchorWorks: 0,
-	HasSkylight:        1,
-	BedWorks:           1,
-	Effects:            "minecraft:overworld",
-	HasRaids:           0,
-	LogicalHeight:      256,
-	CoordinateScale:    1.0,
-	Ultrawarm:          0,
-	HasCeiling:         0,
-}
-
 type BiomeRegistry struct {
 	Type  string               `nbt:"type"`
 	Value []BiomeRegistryEntry `nbt:"value"`
@@ -115,4 +99,62 @@ type BiomeEffects struct {
 	WaterFogColor int32 `nbt:"water_fog_color"`
 	FogColor      int32 `nbt:"fog_color"`
 	WaterColor    int32 `nbt:"water_color"`
+}
+
+var MinecraftDimensionCodec = DimensionCodec{
+	DimensionTypes: MinecraftDimensionTypeRegistry,
+	BiomeRegistry:  MinecraftBiomeRegistry,
+}
+
+var MinecraftDimensionTypeRegistry = DimensionTypeRegistry{
+	Type: "minecraft:dimension_type",
+	Value: []DimensionTypeRegistryEntry{
+		{
+			Name:    "minecraft:overworld",
+			ID:      0,
+			Element: MinecraftOverworld,
+		},
+	},
+}
+
+var MinecraftOverworld = DimensionType{
+	PiglinSafe:         0,
+	Natural:            1,
+	AmbientLight:       0.0,
+	Infiniburn:         "minecraft:infiniburn_overworld",
+	RespawnAnchorWorks: 0,
+	HasSkylight:        1,
+	BedWorks:           1,
+	Effects:            "minecraft:overworld",
+	HasRaids:           0,
+	LogicalHeight:      256,
+	CoordinateScale:    1.0,
+	Ultrawarm:          0,
+	HasCeiling:         0,
+}
+
+var MinecraftBiomeRegistry = BiomeRegistry{
+	Type: "minecraft:worldgen/biome",
+	Value: []BiomeRegistryEntry{
+		MinecraftPlains,
+	},
+}
+
+var MinecraftPlains = BiomeRegistryEntry{
+	Name: "minecraft:plains",
+	ID:   0,
+	Element: BiomeProperties{
+		Precipitation: "none",
+		Depth:         0.125,
+		Temperature:   0.8,
+		Scale:         0.05,
+		Downfall:      0.4,
+		Category:      "plains",
+		Effects: BiomeEffects{
+			SkyColor:      7907327,
+			WaterFogColor: 329011,
+			FogColor:      12638463,
+			WaterColor:    4159204,
+		},
+	},
 }
